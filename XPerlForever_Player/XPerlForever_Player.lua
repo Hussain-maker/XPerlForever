@@ -622,7 +622,9 @@ function XPerl_Player_DruidBarUpdate(self)
 	end
 
 	--local druidBarExtra
-	if ((playerClass == "DRUID" or playerClass == "PRIEST") and UnitPowerType(self.partyid) > 0) then -- Shaman's UnitPowerType is buggy
+	-- UnitPowerType can return nothing (e.g. while options are applied before the frame has its unit)
+	local powerType = self.partyid and UnitPowerType(self.partyid)
+	if ((playerClass == "DRUID" or playerClass == "PRIEST") and XPerl_CanAccess(powerType) and powerType > 0) then -- Shaman's UnitPowerType is buggy
 		if (pconf.values) then
 			druidBar.text:Show()
 		else
