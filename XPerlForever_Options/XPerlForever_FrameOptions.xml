@@ -1789,6 +1789,10 @@
 					if (not (width >= 740)) then
 						width = 740
 					end
+
+					-- Tabs from optional modules go into the free space after the last tab;
+					-- they never change the width; an error there must not stop the window setup
+					xpcall(function() XPerl_Options_AddExtraTabs(tabs, width) end, geterrorhandler())
 					self:SetWidth(width)
 					XPerl_OptionsAnchor:SetWidth(width)
 					XPerl_OptionsAnchor:SetHeight(self:GetHeight())

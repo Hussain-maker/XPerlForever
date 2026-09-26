@@ -822,6 +822,97 @@ function XPerl_Options_EnableTab(self, enable)
 	end
 end
 
+-- Extra tabs from optional modules -------------------------------------------
+-- A module appends {key = "MyModule", title = "My Tab", create = function(page) end}
+-- to the global list XPerl_OptionsExtraTabs when it loads. On the first show each
+-- entry gets a tab after the last built-in tab and a page like the built-in ones;
+-- create(page) fills it on first show. The window's width, scale and saved size
+-- never change: a title that doesn't fit is shortened (tooltip shows it in full),
+-- but a tab is never narrower than EXTRA_TAB_MIN_WIDTH, so in a completely full
+-- row it may extend past the last tab area.
+
+local EXTRA_TAB_MIN_WIDTH = 40
+
+-- ExtraTab_OnEnter - full title of a shortened extra tab
+local function ExtraTab_OnEnter(self)
+	GameTooltip:SetOwner(self, "ANCHOR_TOP")
+	GameTooltip:SetText(self.fullTitle, 1, 1, 1)
+	GameTooltip:Show()
+end
+
+-- XPerl_Options_AddExtraTabs(tabs, width)
+-- tabs: the built-in tabs just laid out; width: the final window width
+function XPerl_Options_AddExtraTabs(tabs, width)
+	local extra = XPerl_OptionsExtraTabs
+	if (type(extra) ~= "table" or #extra == 0) then
+		return
+	end
+
+	-- Right edge of the built-in row inside XPerl_Options_Tab: Tab1 starts at x = 2,
+	-- the others overlap the previous tab by 1 (see XPerl_Options' OnShow).
+	local used = 2
+	for i = 1, #tabs do
+		local tab = tabs[i]
+		local pending = tab:GetScript("OnShow")		-- XPerlTabTemplate sizes a tab on its first show
+		if (pending) then
+			pending(tab)
+		end
+		used = used + tab:GetWidth() - (i > 1 and 1 or 0)
+	end
+	-- XPerl_Options_Tab spans XPerl_Options_Area_Tabs: x = 165 to width - 8 (XPerl_OptionsTemplate)
+	local available = width - 173
+
+	local tabFrame = XPerl_Options_Tab
+	local lastTab = tabs[#tabs]
+	for i = 1, #extra do
+		local def = extra[i]
+		if (type(def) == "table" and type(def.key) == "string" and type(def.title) == "string" and type(def.create) == "function" and not _G["XPerl_Options_"..def.key.."_Options"]) then
+			local id = #tabFrame.frameNames + 1
+			tinsert(tabFrame.frameNames, "_"..def.key.."_Options")
+
+			local page = CreateFrame("Frame", "XPerl_Options_"..def.key.."_Options", XPerl_Options)
+			page:SetPoint("TOPLEFT", XPerl_Options_Area_Tabs)
+			page:SetPoint("BOTTOMRIGHT", XPerl_Options_Area_Tabs)
+			page:SetScale(0.9)
+			page:Hide()
+			page:SetScript("OnShow", function(self)
+				self:SetScript("OnShow", nil)
+				xpcall(function() def.create(self) end, geterrorhandler())
+			end)
+
+			local tab = CreateFrame("Button", tabFrame:GetName()..id, tabFrame, "XPerlTabTemplate")
+			tab:SetScript("OnShow", nil)		-- text, width and colour are set here instead
+			tab:SetID(id)
+			tab:ClearAllPoints()
+			tab:SetPoint("BOTTOMLEFT", lastTab, "BOTTOMRIGHT", -1, 0)
+			tab:SetText(def.title)
+
+			-- Same width rule as XPerlTabTemplate, limited to the space left in the row
+			local text = _G[tab:GetName().."Text"]
+			local tabWidth = text:GetStringWidth() + 13.5
+			local room = available - (used - 1)
+			if (tabWidth > room) then
+				tabWidth = max(room, EXTRA_TAB_MIN_WIDTH)
+				text:SetWidth(tabWidth - 13.5)
+				text:SetWordWrap(false)
+				tab.fullTitle = def.title
+				tab:SetScript("OnEnter", ExtraTab_OnEnter)
+				tab:SetScript("OnLeave", GameTooltip_Hide)
+			end
+			tab:SetWidth(tabWidth)
+			XPerl_Options_SetTabColor(tab, XPerlDB.optionsColour)
+
+			tab:SetScript("OnClick", function(self)
+				self:GetParent():SelectTab(self:GetID())
+				XPerl_Options_InCombatChange(UnitAffectingCombat("player"))
+			end)
+
+			used = used + tabWidth - 1
+			lastTab = tab
+		end
+	end
+end
+
 -- XPerl_Options_InCombatChange
 function XPerl_Options_InCombatChange(inCombat)
 	for k, v in pairs(protected) do
