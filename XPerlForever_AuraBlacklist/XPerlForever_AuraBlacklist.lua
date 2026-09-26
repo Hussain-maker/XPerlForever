@@ -1,0 +1,674 @@
+-- X-Perl UnitFrames - Buff Blacklist module
+-- License: GNU GPL v3, 29 June 2007 (see LICENSE.txt)
+--
+-- Hides chosen buffs on the Target, Focus, Target's Target and Focus Target
+-- frames. The only links to the core are the optional XPerl_BuffFilter and
+-- XPerl_BuffContainerFilter callbacks (XPerlForever.lua) and an entry in
+-- XPerl_OptionsExtraTabs for the options tab (XPerlForever_Options).
+
+if (not XPerl_Unit_UpdateBuffs or not XPerl_CanAccess or not XPerl_SafeBool) then
+	return
+end
+
+local floor = floor
+local format = format
+local next = next
+local pairs = pairs
+local pcall = pcall
+local sort = table.sort
+local strlower = strlower
+local strtrim = strtrim
+local tonumber = tonumber
+local type = type
+local wipe = wipe
+
+local XPerl_CanAccess = XPerl_CanAccess
+local XPerl_SafeBool = XPerl_SafeBool
+local GetSpellTextureFunc = (C_Spell and C_Spell.GetSpellTexture) or GetSpellTexture
+
+local ADDON_NAME = "XPerlForever_AuraBlacklist"
+local QUESTION_MARK = "Interface\\Icons\\INV_Misc_QuestionMark"
+local ROWS = 16
+local ROW_HEIGHT = 22
+
+-- self.partyid of the frames that are filtered
+local filteredUnits = {
+	target = true,
+	focus = true,
+	targettarget = true,
+	focustarget = true,
+}
+
+-- Units searched when a buff is added by name
+local scanUnits = {"target", "focus", "targettarget", "focustarget", "player"}
+
+local db			-- XPerlAuraBlacklistDB
+local spells		-- db.spells: [spellID] = {name = "...", showMine = true|nil}
+local sorted = {}	-- spell IDs in display order
+local sortKeys = {}
+local config		-- options tab content, built the first time the tab is shown
+
+-- XPerl_BuffFilter(frame, unit, spellID, auraInstanceID, isPlayer)
+-- Called by XPerl_Unit_UpdateBuffs for each helpful aura; true hides it.
+-- A spell ID that cannot be read (secret) is never guessed at: the buff shows.
+function XPerl_BuffFilter(frame, unit, spellID, auraInstanceID, isPlayer)
+	if (not spells or not db.enabled or not filteredUnits[unit]) then
+		return false
+	end
+	if (not XPerl_CanAccess(spellID)) then
+		return false
+	end
+	local entry = spells[spellID]
+	if (not entry or (entry.showMine and isPlayer)) then
+		return false
+	end
+	return true
+end
+
+-- SpellNameIcon(spell) - name, icon, spellID for a spell ID or name; nil if unknown
+local function SpellNameIcon(spell)
+	local name, icon, id
+	if (C_Spell and C_Spell.GetSpellInfo) then
+		local info = C_Spell.GetSpellInfo(spell)
+		if (info) then
+			name, icon, id = info.name, info.iconID, info.spellID
+		end
+	elseif (GetSpellInfo) then
+		local _
+		name, _, icon, _, _, _, id = GetSpellInfo(spell)
+	end
+	if (not XPerl_CanAccess(name)) then
+		return nil
+	end
+	return name, icon, id
+end
+
+-- DisplayName(id, entry)
+local function DisplayName(id, entry)
+	return entry.name or format(XPERL_AURABL_SPELL, id)
+end
+
+-- SortByName
+local function SortByName(a, b)
+	local ka, kb = sortKeys[a], sortKeys[b]
+	if (ka ~= kb) then
+		return ka < kb
+	end
+	return a < b
+end
+
+-- RebuildSorted() - only after add / remove / import, never per frame
+local function RebuildSorted()
+	wipe(sorted)
+	wipe(sortKeys)
+	if (not spells) then
+		return
+	end
+	for id, entry in pairs(spells) do
+		sorted[#sorted + 1] = id
+		sortKeys[id] = strlower(DisplayName(id, entry))
+	end
+	sort(sorted, SortByName)
+end
+
+-- GetBBFList() - BetterBlizzFrames' blacklist (read only), or nil
+local function GetBBFList()
+	local bbf = BetterBlizzFramesDB
+	if (type(bbf) == "table" and type(bbf.auraBlacklist) == "table") then
+		return bbf.auraBlacklist
+	end
+end
+
+-- InitDB() - on our ADDON_LOADED (SavedVariables are ready then)
+local function InitDB()
+	if (type(XPerlAuraBlacklistDB) ~= "table") then
+		XPerlAuraBlacklistDB = {}
+	end
+	db = XPerlAuraBlacklistDB
+	if (db.enabled == nil) then
+		db.enabled = true
+	end
+	if (type(db.spells) ~= "table") then
+		db.spells = {}
+	end
+	-- Drop anything that is not [integer] = table, and bad name/showMine values, so lookups and sorting stay safe
+	for id, entry in pairs(db.spells) do
+		if (type(id) ~= "number" or id ~= floor(id) or id < 1 or id > 2^31 or type(entry) ~= "table") then
+			db.spells[id] = nil
+		elseif (type(entry.name) ~= "string") then
+			entry.name = nil
+		end
+		if (db.spells[id] and entry.showMine ~= nil and entry.showMine ~= true) then
+			entry.showMine = nil
+		end
+	end
+	spells = db.spells
+end
+
+-- Restricted-aura mode (R2b) ------------------------------------------------
+-- While XPerl_AurasSecret() is true the frames show buffs through Blizzard's
+-- AuraContainer; the blacklist is handed to its buff group as a candidate
+-- filter. "Show if mine" cannot be honoured there (one group).
+
+local GetSpellAuraSecrecy = C_Secrets and C_Secrets.GetSpellAuraSecrecy
+local NEVER_SECRET = Enum and Enum.SecrecyLevel and Enum.SecrecyLevel.NeverSecret
+local FILTERS_NONE = {}
+
+local alwaysReadable = {}		-- [spellID] = true|false, cached for the session
+local filtersAll = FILTERS_NONE	-- {excludeSpellIDs = every listed ID}
+local filtersNS = FILTERS_NONE	-- {excludeSpellIDs = never-secret listed IDs}
+local setsDirty = true			-- rebuild the sets on next use
+local liveContainers = {}		-- [frame] = its current buff AuraContainer
+local liveKeys = {}				-- [frame] = that container's group key
+local appliedFilters = {}		-- [frame] = filters table last applied to its current container
+local pendingApply
+local retryTicker
+
+-- SpellAlwaysReadable(id) - aura data for this spell is never secret (cached)
+local function SpellAlwaysReadable(id)
+	local cached = alwaysReadable[id]
+	if (cached == nil) then
+		cached = false
+		if (GetSpellAuraSecrecy and NEVER_SECRET ~= nil) then
+			local ok, level = pcall(GetSpellAuraSecrecy, id)
+			cached = (ok and XPerl_CanAccess(level) and level == NEVER_SECRET) and true or false
+		end
+		alwaysReadable[id] = cached
+	end
+	return cached
+end
+
+-- BuildExcludeSets() - only when the list changed
+local function BuildExcludeSets()
+	local all, ns = {}, {}
+	if (spells) then
+		for id in pairs(spells) do
+			all[id] = true
+			if (SpellAlwaysReadable(id)) then
+				ns[id] = true
+			end
+		end
+	end
+	filtersAll = next(all) and {excludeSpellIDs = all} or FILTERS_NONE
+	filtersNS = next(ns) and {excludeSpellIDs = ns} or FILTERS_NONE
+	setsDirty = nil
+end
+
+-- CanFilterBuffIDs(unit) - are helpful-aura spell IDs usable for this unit?
+local function CanFilterBuffIDs(unit)
+	if (not unit or not XPerl_SafeBool(UnitExists(unit), false)) then
+		return false
+	end
+	if (UnitIsPlayerControlledOrGroupMember and XPerl_SafeBool(UnitIsPlayerControlledOrGroupMember(unit), false)) then
+		return true
+	end
+	return XPerl_SafeBool(UnitCanAssist("player", unit), false) and true or false
+end
+
+-- FiltersFor(unit) - candidate filters for a buff group showing this unit
+local function FiltersFor(unit)
+	if (not db or not db.enabled) then
+		return FILTERS_NONE
+	end
+	if (setsDirty) then
+		BuildExcludeSets()
+	end
+	if (CanFilterBuffIDs(unit)) then
+		return filtersAll
+	end
+	return filtersNS
+end
+
+-- ApplyContainer(frame, fresh) - callers make sure it is allowed right now.
+-- fresh: the container was just created and has no auras yet, so no filter is
+-- needed for the empty set and no aura update is needed.
+local function ApplyContainer(frame, fresh)
+	local container = liveContainers[frame]
+	if (not container or not container.SetAuraGroupCandidateFilters) then
+		return
+	end
+	local filters = FiltersFor(frame.partyid)
+	if (appliedFilters[frame] == filters) then
+		return
+	end
+	if (fresh and filters == FILTERS_NONE) then
+		appliedFilters[frame] = filters
+		return
+	end
+	if (pcall(container.SetAuraGroupCandidateFilters, container, liveKeys[frame], filters)) then
+		appliedFilters[frame] = filters
+		if (not fresh and container:IsShown() and container.UpdateAllAuras) then
+			container:UpdateAllAuras()
+		end
+	end
+end
+
+-- ApplyAllContainers() - re-apply to live groups, or wait until X-Perl says it is safe
+local ApplyAllContainers
+local function RetryPending()
+	if (pendingApply and XPerl_AuraContainer_SafeToReconfigure()) then
+		ApplyAllContainers()
+	end
+end
+
+ApplyAllContainers = function()
+	if (not next(liveContainers) or not XPerl_AuraContainer_SafeToReconfigure) then
+		return
+	end
+	if (not XPerl_AuraContainer_SafeToReconfigure()) then
+		pendingApply = true
+		if (not retryTicker and C_Timer and C_Timer.NewTicker) then
+			retryTicker = C_Timer.NewTicker(1, RetryPending)
+		end
+		return
+	end
+	pendingApply = nil
+	if (retryTicker) then
+		retryTicker:Cancel()
+		retryTicker = nil
+	end
+	for frame in pairs(liveContainers) do
+		ApplyContainer(frame)
+	end
+end
+
+-- XPerl_BuffContainerFilter(frame, container, groupKey, filter)
+-- Called by XPerl_AuraContainer_Create for every new group. A new group is not
+-- live yet, so it may be configured even while auras are secret.
+function XPerl_BuffContainerFilter(frame, container, groupKey, filter)
+	if (filter ~= "HELPFUL" or not frame or not filteredUnits[frame.partyid]) then
+		return
+	end
+	liveContainers[frame] = container
+	liveKeys[frame] = groupKey
+	appliedFilters[frame] = nil
+	ApplyContainer(frame, true)
+end
+
+-- Refresh the four filtered frames (classic path) so changes show without a /reload
+local function RefreshTarget(frame)
+	if (frame and frame.conf and frame:IsShown() and XPerl_Targets_BuffUpdate) then
+		XPerl_Targets_BuffUpdate(frame)
+	end
+end
+
+local function RefreshTargetTarget(frame)
+	if (frame and frame.conf and frame:IsShown() and XPerl_TargetTarget_UpdateDisplay) then
+		XPerl_TargetTarget_UpdateDisplay(frame, true)
+	end
+end
+
+local function RefreshFrames()
+	RefreshTarget(XPerl_Target)
+	RefreshTarget(XPerl_Focus)
+	RefreshTargetTarget(XPerl_TargetTarget)
+	RefreshTargetTarget(XPerl_FocusTarget)
+end
+
+-- Config_UpdateList() - fills the visible rows only
+local function Config_UpdateList()
+	if (not config or not config:IsVisible() or not spells) then
+		return
+	end
+	local total = #sorted
+	FauxScrollFrame_Update(config.scroll, total, ROWS, ROW_HEIGHT)
+	local offset = FauxScrollFrame_GetOffset(config.scroll)
+	for i = 1, ROWS do
+		local row = config.rows[i]
+		local id = sorted[offset + i]
+		local entry = id and spells[id]
+		if (entry) then
+			row.spellID = id
+			row.icon:SetTexture((GetSpellTextureFunc and GetSpellTextureFunc(id)) or QUESTION_MARK)
+			row.name:SetText(DisplayName(id, entry))
+			row.idText:SetText(id)
+			row.mine:SetChecked(entry.showMine and true or false)
+			row:Show()
+		else
+			row.spellID = nil
+			row:Hide()
+		end
+	end
+	config.count:SetText(format(XPERL_AURABL_COUNT, total))
+	config.enable:SetChecked(db.enabled and true or false)
+	config.import:SetEnabled(GetBBFList() ~= nil)
+end
+
+-- ListChanged(resort) - after any change to the list or the master toggle
+local function ListChanged(resort)
+	if (resort) then
+		RebuildSorted()
+		setsDirty = true
+	end
+	Config_UpdateList()
+	RefreshFrames()
+	ApplyAllContainers()
+end
+
+-- FindAuraByName(name) - spell ID of a readable helpful aura with exactly this name
+local function FindAuraByName(name)
+	local lname = strlower(name)
+	for u = 1, #scanUnits do
+		local unit = scanUnits[u]
+		if (UnitExists(unit)) then
+			for i = 1, 40 do
+				local auraName, _, _, _, _, _, _, _, _, spellID = XPerl_UnitAuraByIndex(unit, i, "HELPFUL")
+				if (not auraName) then
+					break
+				end
+				if (XPerl_CanAccess(auraName) and XPerl_CanAccess(spellID) and strlower(auraName) == lname) then
+					return spellID
+				end
+			end
+		end
+	end
+end
+
+-- AddSpell(text) - text is a spell ID or an exact spell name. Returns true when added.
+local function AddSpell(text)
+	text = strtrim(text or "")
+	if (text == "" or not spells) then
+		return
+	end
+
+	local id = tonumber(text)
+	local name
+	if (id) then
+		-- Whole numbers from 1 to 2^31 only (rejects fractions, inf and nan)
+		if (id > 0 and id <= 2^31 and id == floor(id)) then
+			name = SpellNameIcon(id)
+		end
+		if (not name) then
+			XPerl_Notice(XPERL_AURABL_NOTFOUND, text)
+			return
+		end
+	else
+		id = FindAuraByName(text)
+		if (id) then
+			name = SpellNameIcon(id) or text
+		else
+			local _
+			name, _, id = SpellNameIcon(text)
+			if (not id or not name or strlower(name) ~= strlower(text)) then
+				XPerl_Notice(XPERL_AURABL_NOTFOUND, text)
+				return
+			end
+		end
+	end
+
+	if (spells[id]) then
+		XPerl_Notice(XPERL_AURABL_EXISTS, DisplayName(id, spells[id]), id)
+		return
+	end
+
+	spells[id] = {name = name}
+	XPerl_Notice(XPERL_AURABL_ADDED, name, id)
+	ListChanged(true)
+	return true
+end
+
+-- ImportBBF() - merge BetterBlizzFramesDB.auraBlacklist; never writes to BBF
+local function ImportBBF()
+	local src = GetBBFList()
+	if (not src or not spells) then
+		XPerl_Notice(XPERL_AURABL_IMPORT_NONE)
+		return
+	end
+
+	local added, existing, skipped = 0, 0, 0
+	for key, entry in pairs(src) do
+		local id = tonumber(key)
+		if (not id and type(entry) == "table" and entry.id) then
+			id = tonumber(entry.id)
+		end
+		if (id and id > 0 and id <= 2^31 and id == floor(id)) then
+			if (spells[id]) then
+				existing = existing + 1
+			else
+				local name, showMine
+				if (type(entry) == "table") then
+					if (type(entry.name) == "string" and entry.name ~= "") then
+						name = entry.name
+					end
+					showMine = entry.showMine and true or nil
+				end
+				spells[id] = {name = name or SpellNameIcon(id), showMine = showMine}
+				added = added + 1
+			end
+		else
+			skipped = skipped + 1
+		end
+	end
+
+	XPerl_Notice(XPERL_AURABL_IMPORTED, added, existing, skipped)
+	if (added > 0) then
+		ListChanged(true)
+	end
+end
+
+-- Tooltips
+local function ShowTooltip(self)
+	GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+	GameTooltip:SetText(self.tooltipTitle, 1, 1, 1)
+	if (self.tooltipText) then
+		GameTooltip:AddLine(self.tooltipText, nil, nil, nil, true)
+	end
+	GameTooltip:Show()
+end
+
+local function Row_OnEnter(self)
+	if (self.spellID and GameTooltip.SetSpellByID) then
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		GameTooltip:SetSpellByID(self.spellID)
+		GameTooltip:Show()
+	end
+end
+
+-- Rows sit on top of the scroll frame, so pass the wheel on to it
+local function List_OnMouseWheel(self, delta)
+	local scroll = config and config.scroll
+	local handler = scroll and scroll:GetScript("OnMouseWheel")
+	if (handler) then
+		handler(scroll, delta)
+	end
+end
+
+local function Mine_OnClick(self)
+	local row = self:GetParent()
+	local entry = row.spellID and spells[row.spellID]
+	if (entry) then
+		entry.showMine = self:GetChecked() and true or nil
+		ListChanged(false)
+	end
+end
+
+local function Remove_OnClick(self)
+	local row = self:GetParent()
+	if (row.spellID and spells[row.spellID]) then
+		spells[row.spellID] = nil
+		ListChanged(true)
+	end
+end
+
+local function CreateLabel(parent, text, font)
+	local label = parent:CreateFontString(nil, "ARTWORK", font or "GameFontNormalSmall")
+	label:SetText(text)
+	return label
+end
+
+-- CreateRow(list, i)
+local function CreateRow(list, i)
+	local row = CreateFrame("Frame", nil, list)
+	row:SetSize(400, ROW_HEIGHT)
+	row:SetPoint("TOPLEFT", list, "TOPLEFT", 8, -8 - (i - 1) * ROW_HEIGHT)
+	row:EnableMouse(true)
+	row:EnableMouseWheel(true)
+	row:SetScript("OnEnter", Row_OnEnter)
+	row:SetScript("OnLeave", GameTooltip_Hide)
+	row:SetScript("OnMouseWheel", List_OnMouseWheel)
+
+	row.icon = row:CreateTexture(nil, "ARTWORK")
+	row.icon:SetSize(18, 18)
+	row.icon:SetPoint("LEFT", 0, 0)
+	row.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+
+	row.name = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+	row.name:SetPoint("LEFT", 24, 0)
+	row.name:SetSize(216, ROW_HEIGHT)
+	row.name:SetJustifyH("LEFT")
+	row.name:SetWordWrap(false)
+
+	row.idText = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+	row.idText:SetPoint("LEFT", 248, 0)
+	row.idText:SetSize(64, ROW_HEIGHT)
+	row.idText:SetJustifyH("LEFT")
+
+	row.mine = CreateFrame("CheckButton", nil, row, "UICheckButtonTemplate")
+	row.mine:SetSize(22, 22)
+	row.mine:SetPoint("LEFT", 318, 0)
+	row.mine.tooltipTitle = XPERL_AURABL_COL_MINE
+	row.mine.tooltipText = XPERL_AURABL_MINE_DESC
+	row.mine:SetScript("OnClick", Mine_OnClick)
+	row.mine:SetScript("OnEnter", ShowTooltip)
+	row.mine:SetScript("OnLeave", GameTooltip_Hide)
+
+	row.remove = CreateFrame("Button", nil, row, "UIPanelCloseButton")
+	row.remove:SetSize(22, 22)
+	row.remove:SetPoint("LEFT", 370, 0)
+	row.remove.tooltipTitle = XPERL_AURABL_REMOVE
+	row.remove:SetScript("OnClick", Remove_OnClick)
+	row.remove:SetScript("OnEnter", ShowTooltip)
+	row.remove:SetScript("OnLeave", GameTooltip_Hide)
+
+	row:Hide()
+	return row
+end
+
+-- CreateConfig(parent) - the options tab content, built the first time the tab is shown
+local function CreateConfig(parent)
+	local f = CreateFrame("Frame", "XPerl_AuraBlacklist_Config", parent)
+	f:SetPoint("TOPLEFT")
+	f:SetSize(460, 510)
+
+	-- Master toggle
+	local enable = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
+	enable:SetSize(24, 24)
+	enable:SetPoint("TOPLEFT", 12, -10)
+	enable:SetScript("OnClick", function(self)
+		db.enabled = self:GetChecked() and true or false
+		ListChanged(false)
+	end)
+	local enableLabel = CreateLabel(f, XPERL_AURABL_ENABLE, "GameFontHighlight")
+	enableLabel:SetPoint("LEFT", enable, "RIGHT", 2, 0)
+	f.enable = enable
+
+	-- Import from BetterBlizzFrames
+	local import = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+	import:SetSize(200, 22)
+	import:SetPoint("TOPRIGHT", -14, -11)
+	import:SetText(XPERL_AURABL_IMPORT)
+	import:SetScript("OnClick", ImportBBF)
+	import.tooltipTitle = XPERL_AURABL_IMPORT
+	import.tooltipText = XPERL_AURABL_IMPORT_DESC
+	import:SetScript("OnEnter", ShowTooltip)
+	import:SetScript("OnLeave", GameTooltip_Hide)
+	if (import.SetMotionScriptsWhileDisabled) then
+		import:SetMotionScriptsWhileDisabled(true)
+	end
+	f.import = import
+
+	-- Add by spell ID or exact name
+	local addLabel = CreateLabel(f, XPERL_AURABL_ADD_DESC)
+	addLabel:SetPoint("TOPLEFT", 16, -44)
+
+	local edit = CreateFrame("EditBox", "XPerl_AuraBlacklist_ConfigAdd", f, "InputBoxTemplate")
+	edit:SetSize(260, 20)
+	edit:SetPoint("TOPLEFT", 22, -60)
+	edit:SetAutoFocus(false)
+	edit:SetMaxLetters(100)
+	local function DoAdd()
+		if (AddSpell(edit:GetText())) then
+			edit:SetText("")
+		end
+		edit:ClearFocus()
+	end
+	edit:SetScript("OnEnterPressed", DoAdd)
+	edit:SetScript("OnEscapePressed", edit.ClearFocus)
+
+	local add = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+	add:SetSize(80, 22)
+	add:SetPoint("LEFT", edit, "RIGHT", 8, 0)
+	add:SetText(XPERL_AURABL_ADD)
+	add:SetScript("OnClick", DoAdd)
+
+	-- List
+	local list = CreateFrame("Frame", nil, f, "XPerlBackdropTemplate")
+	list:SetPoint("TOPLEFT", 12, -108)
+	list:SetPoint("BOTTOMRIGHT", -12, 34)
+	list:SetBackdrop(XPerl_Tooltip_Edge_9)
+	list:EnableMouseWheel(true)
+	list:SetScript("OnMouseWheel", List_OnMouseWheel)
+
+	local colName = CreateLabel(f, XPERL_AURABL_COL_NAME)
+	colName:SetPoint("BOTTOMLEFT", list, "TOPLEFT", 32, 2)
+	local colID = CreateLabel(f, XPERL_AURABL_COL_ID)
+	colID:SetPoint("BOTTOMLEFT", list, "TOPLEFT", 256, 2)
+	local colMine = CreateLabel(f, XPERL_AURABL_COL_MINE)
+	colMine:SetPoint("BOTTOMLEFT", list, "TOPLEFT", 316, 2)
+
+	local scroll = CreateFrame("ScrollFrame", "XPerl_AuraBlacklist_ConfigScroll", list, "FauxScrollFrameTemplate")
+	scroll:SetPoint("TOPLEFT", 4, -8)
+	scroll:SetPoint("BOTTOMRIGHT", -28, 8)
+	scroll:SetScript("OnVerticalScroll", function(self, offset)
+		FauxScrollFrame_OnVerticalScroll(self, offset, ROW_HEIGHT, Config_UpdateList)
+	end)
+	f.scroll = scroll
+
+	f.rows = {}
+	for i = 1, ROWS do
+		f.rows[i] = CreateRow(list, i)
+	end
+
+	local count = CreateLabel(f, "")
+	count:SetPoint("BOTTOMLEFT", 16, 14)
+	f.count = count
+
+	f:SetScript("OnShow", Config_UpdateList)
+	-- Switching tab or closing the options must not leave the add box focused
+	f:SetScript("OnHide", function()
+		edit:ClearFocus()
+	end)
+	return f
+end
+
+-- Our tab in X-Perl's options window. XPerlForever_Options (load-on-demand)
+-- reads this list the first time its window is shown, whichever addon loaded
+-- first; create() runs the first time the tab is opened.
+XPerl_OptionsExtraTabs = XPerl_OptionsExtraTabs or {}
+tinsert(XPerl_OptionsExtraTabs, {
+	key = "AuraBlacklist",
+	title = XPERL_AURABL_TITLE,
+	create = function(page)
+		config = CreateConfig(page)
+		RebuildSorted()
+		Config_UpdateList()
+	end,
+})
+
+local events = CreateFrame("Frame")
+events:RegisterEvent("ADDON_LOADED")
+events:RegisterEvent("PLAYER_TARGET_CHANGED")
+events:RegisterEvent("PLAYER_FOCUS_CHANGED")
+events:RegisterUnitEvent("UNIT_TARGET", "target", "focus")
+events:SetScript("OnEvent", function(self, event, name)
+	if (event == "ADDON_LOADED") then
+		if (name == ADDON_NAME) then
+			InitDB()
+			self:UnregisterEvent("ADDON_LOADED")
+		end
+	else
+		-- The unit behind a buff container changed, so its exclude set may have to change.
+		-- Applied now if safe, otherwise once X-Perl says reconfiguring is safe again.
+		ApplyAllContainers()
+	end
+end)

@@ -382,6 +382,11 @@ function XPerl_AuraContainer_Create(self, holderKey, name, groupKey, filter, siz
 			XPerl_AuraContainer_InitButtonCommon(button, size, showSwipe)
 		end,
 	})
+	-- Z-Perl Forever: optional hook XPerl_BuffContainerFilter(frame, container, groupKey, filter),
+	-- called once for each new aura group before it is live (so it may be configured while secret).
+	if (XPerl_BuffContainerFilter) then
+		XPerl_BuffContainerFilter(self, container, groupKey, filter)
+	end
 	if (container.SetFlowLayoutMaximumLineSize) then
 		container:SetFlowLayoutMaximumLineSize(lineSize)
 	end
@@ -3665,7 +3670,9 @@ function XPerl_Unit_UpdateBuffs(self, maxBuffs, maxDebuffs, castableOnly, curabl
 					end
 					local stealable = XPerl_CanAccess(canStealOrPurge) and canStealOrPurge
 
-					if (icon and (((mine == 1) and (isPlayer or stealable)) or ((mine == 2) and not (isPlayer or stealable)))) then
+					-- Z-Perl Forever: optional hook XPerl_BuffFilter(frame, unit, spellID, auraInstanceID, isPlayer),
+					-- called for buffs that would be shown; return true to hide the buff (no gap, not counted).
+					if (icon and (((mine == 1) and (isPlayer or stealable)) or ((mine == 2) and not (isPlayer or stealable))) and not (XPerl_BuffFilter and XPerl_BuffFilter(self, partyid, spellID, auraInstanceID, isPlayer))) then
 						local button = XPerl_GetBuffButton(self, buffIconIndex, 0, true, buffnum)
 						button.filter = filter
 						button:SetAlpha(1)
