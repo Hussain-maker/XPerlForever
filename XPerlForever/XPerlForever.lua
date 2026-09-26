@@ -1249,8 +1249,10 @@ function XPerl_BlizzFrameDisable(self)
 		debuffFrame:UnregisterAllEvents()
 	end
 
+	-- The player frame's class power bar also drives the Personal Resource Display's class
+	-- resource (e.g. combo points, which other addons can show on the target nameplate).
 	local classPowerBar = self.classPowerBar
-	if classPowerBar then
+	if classPowerBar and self ~= PlayerFrame then
 		classPowerBar:UnregisterAllEvents()
 	end
 
