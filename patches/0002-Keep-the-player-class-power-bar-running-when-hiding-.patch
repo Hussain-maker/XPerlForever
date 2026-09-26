@@ -1,0 +1,37 @@
+From d05b1af7a1b1532b52ab7a0a81a31a6ca6bd4738 Mon Sep 17 00:00:00 2001
+From: Hussain-maker <79055482+Hussain-maker@users.noreply.github.com>
+Date: Sat, 26 Sep 2026 18:39:27 +0100
+Subject: [PATCH 2/4] Keep the player class power bar running when hiding the
+ Blizzard player frame
+
+On retail (Midnight) the Blizzard player frame's class power bar also drives
+the Personal Resource Display's class resource. XPerl_BlizzFrameDisable
+unregistered its events, so combo points shown on the Personal Resource
+Display (or moved to the target nameplate by other addons) appeared but
+never updated. Leave that bar's events alone; the player frame itself is
+still hidden and its other parts are still disabled.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ XPerlForever/XPerlForever.lua | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/XPerlForever/XPerlForever.lua b/XPerlForever/XPerlForever.lua
+index 228d4d3..ad0ad41 100644
+--- a/XPerlForever/XPerlForever.lua
++++ b/XPerlForever/XPerlForever.lua
+@@ -1249,8 +1249,10 @@ function XPerl_BlizzFrameDisable(self)
+ 		debuffFrame:UnregisterAllEvents()
+ 	end
+ 
++	-- The player frame's class power bar also drives the Personal Resource Display's class
++	-- resource (e.g. combo points, which other addons can show on the target nameplate).
+ 	local classPowerBar = self.classPowerBar
+-	if classPowerBar then
++	if classPowerBar and self ~= PlayerFrame then
+ 		classPowerBar:UnregisterAllEvents()
+ 	end
+ 
+-- 
+2.48.1.windows.1
+

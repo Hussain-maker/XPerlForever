@@ -1,0 +1,39 @@
+From ddc72d5e0ea8ca692982d4c074c3d805d7e3e6d3 Mon Sep 17 00:00:00 2001
+From: Hussain-maker <79055482+Hussain-maker@users.noreply.github.com>
+Date: Sat, 26 Sep 2026 17:28:31 +0100
+Subject: [PATCH 1/4] Colour the player power bar for power types X-Perl has no
+ colour for
+
+XPerl_SetManaBarType only knows mana, rage, focus and energy. For other
+power types (e.g. Balance Astral Power) it left the bar unchanged, so
+after a Druid shifted Bear -> caster the bar stayed red (Cat: yellow).
+Fall back to Blizzard's PowerBarColor for those power types.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ XPerlForever/XPerlForever.lua | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/XPerlForever/XPerlForever.lua b/XPerlForever/XPerlForever.lua
+index f85adfe..228d4d3 100644
+--- a/XPerlForever/XPerlForever.lua
++++ b/XPerlForever/XPerlForever.lua
+@@ -2083,6 +2083,15 @@ function XPerl_SetManaBarType(self)
+ 				colourKey = PowerTokenColours[powerToken]
+ 			end
+ 			local c = colourKey and ((conf.colour.bar and conf.colour.bar[colourKey]) or DefaultPowerColours[colourKey])
++			-- Power types X-Perl has no colour for (Astral Power, Runic Power, ...) use Blizzard's colour
++			if not c and PowerBarColor then
++				if XPerl_CanAccess(powerToken) then
++					c = PowerBarColor[powerToken]
++				end
++				if not c and XPerl_CanAccess(p) then
++					c = PowerBarColor[p]
++				end
++			end
+ 			if (c) then
+ 				m:SetStatusBarColor(c.r, c.g, c.b, 1)
+ 				m.bg:SetVertexColor(c.r, c.g, c.b, 0.25)
+-- 
+2.48.1.windows.1
+
