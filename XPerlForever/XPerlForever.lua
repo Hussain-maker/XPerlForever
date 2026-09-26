@@ -349,11 +349,35 @@ function XPerl_HasAuraContainerNow()
 	return present
 end
 
--- XPerl_AuraContainer_Create(self, holderKey, name, groupKey, filter, size, lineSize, showSwipe)
+-- XPerl_AuraContainer_AddGroup(self, container, groupKey, filter, size, showSwipe, maxCount, layoutIndex)
+-- Adds one aura group with X-Perl's button setup. A container can hold several
+-- groups, laid out in layoutIndex order. maxCount defaults to 40.
+function XPerl_AuraContainer_AddGroup(self, container, groupKey, filter, size, showSwipe, maxCount, layoutIndex)
+	container:AddAuraGroup(groupKey, filter, {
+		maxFrameCount = maxCount or 40,
+		layout = {
+			elementWidth = size,
+			elementHeight = size,
+			elementSpacing = 1,
+			lineSpacing = 1,
+			layoutIndex = layoutIndex or 1,
+		},
+		initializeFrame = function(button)
+			XPerl_AuraContainer_InitButtonCommon(button, size, showSwipe)
+		end,
+	})
+	-- Z-Perl Forever: optional hook XPerl_BuffContainerFilter(frame, container, groupKey, filter),
+	-- called once for each new aura group before it is live (so it may be configured while secret).
+	if (XPerl_BuffContainerFilter) then
+		XPerl_BuffContainerFilter(self, container, groupKey, filter)
+	end
+end
+
+-- XPerl_AuraContainer_Create(self, holderKey, name, groupKey, filter, size, lineSize, showSwipe, maxCount)
 -- Builds a holder + AuraContainer pair; caller positions the holder. Every frame
 -- goes through here so the five requirements that each silently break rendering
 -- live in one place -- see CLAUDE.md pattern 15 before changing anything here.
-function XPerl_AuraContainer_Create(self, holderKey, name, groupKey, filter, size, lineSize, showSwipe)
+function XPerl_AuraContainer_Create(self, holderKey, name, groupKey, filter, size, lineSize, showSwipe, maxCount)
 	local level = self:GetFrameLevel() + 10
 	local holder = self[holderKey]
 	if (not holder) then
@@ -369,24 +393,7 @@ function XPerl_AuraContainer_Create(self, holderKey, name, groupKey, filter, siz
 	container:SetFrameLevel(level)
 	container:SetSize(1, 1)
 	container:SetUnit(self.partyid)
-	container:AddAuraGroup(groupKey, filter, {
-		maxFrameCount = 40,
-		layout = {
-			elementWidth = size,
-			elementHeight = size,
-			elementSpacing = 1,
-			lineSpacing = 1,
-			layoutIndex = 1,
-		},
-		initializeFrame = function(button)
-			XPerl_AuraContainer_InitButtonCommon(button, size, showSwipe)
-		end,
-	})
-	-- Z-Perl Forever: optional hook XPerl_BuffContainerFilter(frame, container, groupKey, filter),
-	-- called once for each new aura group before it is live (so it may be configured while secret).
-	if (XPerl_BuffContainerFilter) then
-		XPerl_BuffContainerFilter(self, container, groupKey, filter)
-	end
+	XPerl_AuraContainer_AddGroup(self, container, groupKey, filter, size, showSwipe, maxCount, 1)
 	if (container.SetFlowLayoutMaximumLineSize) then
 		container:SetFlowLayoutMaximumLineSize(lineSize)
 	end
@@ -422,6 +429,47 @@ function XPerl_AuraContainer_SafeToReconfigure()
 	return not XPerl_AurasSecret()
 end
 
+-- XPerl_AuraContainer_SetCountdown(button, size)
+-- X-Perl's own countdown can't run while aura times are secret, so the game draws
+-- it instead through a duration text binding: whole seconds in X-Perl's yellow,
+-- made fully transparent above the "Countdown Start" time by a step colour curve.
+-- Returns false if the client lacks the API, so the caller can fall back.
+-- (In a do block to keep the file's main chunk under Lua's 200-local limit.)
+do
+local countdownFormatter, countdownCurve, countdownCurveStart
+function XPerl_AuraContainer_SetCountdown(button, size)
+	if (not (button.SetDurationText and C_StringUtil and C_StringUtil.CreateNumericRuleFormatter and C_CurveUtil and C_CurveUtil.CreateColorCurve and Enum.DurationTextBindingProperty)) then
+		return false
+	end
+	local start = XPerlDB.buffs.countdownStart or 20
+	if (not countdownFormatter) then
+		countdownFormatter = C_StringUtil.CreateNumericRuleFormatter()
+		countdownFormatter:AddBreakpoint({threshold = 0, step = 1, rounding = Enum.NumericRuleFormatRounding.Down, format = "%d"})
+	end
+	if (countdownCurveStart ~= start) then
+		countdownCurve = C_CurveUtil.CreateColorCurve()
+		countdownCurve:SetType(Enum.LuaCurveType.Step)
+		countdownCurve:AddPoint(0, CreateColor(1, 1, 0, 1))
+		countdownCurve:AddPoint(start, CreateColor(1, 1, 0, 0))
+		countdownCurveStart = start
+	end
+	local text = button.xperlCountdown
+	if (not text) then
+		text = button.cooldown:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
+		text:SetPoint("TOPLEFT", button)
+		text:SetPoint("BOTTOMRIGHT", button, -1, 2)
+		button.xperlCountdown = text
+	end
+	local file, _, flags = GameFontNormalHuge:GetFont()
+	text:SetFont(file, floor(size * 0.62 + 0.5), flags)
+	local property = Enum.DurationTextBindingProperty.RemainingDuration
+	return (pcall(button.SetDurationText, button, text, {
+		textFormat = {formatString = "{}", components = {{property = property, formatter = countdownFormatter}}},
+		textColor = {curve = countdownCurve, property = property},
+	}))
+end
+end
+
 -- XPerl_AuraContainer_InitButtonCommon(button, size, showSwipe)
 -- An aura button arrives blank: no icon texture, no cooldown. Skip creating them
 -- and it still sizes, lays out and tooltips correctly while drawing nothing at
@@ -437,6 +485,28 @@ function XPerl_AuraContainer_InitButtonCommon(button, size, showSwipe)
 		button.icon = button:CreateTexture(nil, "ARTWORK")
 		button.icon:SetAllPoints(button)
 		button:SetIcon(button.icon)
+	end
+	-- X-Perl's debuff border (XPerl_DeBuffTemplate), coloured by dispel type. The
+	-- game colours it by type name from Blizzard's debuff colours (the table
+	-- X-Perl's own colours come from), so it works while secret; buffs get no
+	-- border, as in the normal layout.
+	if (not button.xperlBorder and button.AddDispelTypeTexture and Enum.CustomAuraButtonDispelTypeTextureStyle) then
+		local border = button:CreateTexture(nil, "OVERLAY")
+		border:SetTexture("Interface\\Buttons\\UI-Debuff-Overlays")
+		border:SetTexCoord(0.296875, 0.5703125, 0, 0.515625)
+		border:SetPoint("TOPLEFT", button, "TOPLEFT", -1, 1)
+		border:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT")
+		local ok = pcall(button.AddDispelTypeTexture, button, border, {
+			style = Enum.CustomAuraButtonDispelTypeTextureStyle.PreserveAsset,
+			showWhenHarmful = true,
+			showWhenHelpful = false,
+			showWithoutDispelType = true,
+		})
+		if (ok) then
+			button.xperlBorder = border
+		else
+			border:Hide()
+		end
 	end
 	if (not button.cooldown and button.SetDurationCooldown) then
 		button.cooldown = CreateFrame("Cooldown", nil, button, "CooldownFrameTemplate")
@@ -455,8 +525,18 @@ function XPerl_AuraContainer_InitButtonCommon(button, size, showSwipe)
 		-- XPerl_GetBuffButton: without it every icon force-shows Blizzard's
 		-- numbers whatever the option says, and OmniCC-style addons attach too.
 		local bconf = XPerlDB and XPerlDB.buffs
+		-- X-Perl's "Buff Countdown" option: its own-style countdown drawn by the game,
+		-- or, if that isn't available, Blizzard's numbers styled like X-Perl's.
+		local xperlCountdown = bconf and bconf.countdown and not bconf.blizzard and size
+		local ownCountdown = xperlCountdown and XPerl_AuraContainer_SetCountdown(button, size)
 		if (button.cooldown.SetHideCountdownNumbers) then
-			button.cooldown:SetHideCountdownNumbers(not (bconf and bconf.blizzard))
+			button.cooldown:SetHideCountdownNumbers(ownCountdown or not (bconf and (bconf.blizzard or bconf.countdown)))
+		end
+		local text = xperlCountdown and not ownCountdown and button.cooldown.GetCountdownFontString and button.cooldown:GetCountdownFontString()
+		if (text) then
+			local file, _, flags = GameFontNormalHuge:GetFont()
+			text:SetFont(file, floor(size * 0.62 + 0.5), flags)
+			text:SetTextColor(1, 1, 0)
 		end
 		button.cooldown.noCooldownCount = not (bconf and bconf.omnicc) or nil
 	end

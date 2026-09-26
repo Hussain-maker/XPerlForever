@@ -428,19 +428,54 @@ local function XPerl_Target_AuraContainer_Setup(self)
 		return
 	end
 
-	local buffsFirst = self.conf.buffs.first or not XPerl_SafeBool(UnitCanAttack("player", self.partyid), false)
+	local canAttack = XPerl_SafeBool(UnitCanAttack("player", self.partyid), false)
+	local buffsFirst = self.conf.buffs.first or not canAttack
+	-- Same rules as XPerl_Unit_UpdateBuffs: "only mine" is for friendly buffs and
+	-- enemy debuffs, "curable" only for friendly debuffs. Blizzard applies them.
+	local buffFilter = "HELPFUL"..(self.conf.buffs.castable == 1 and "|RAID" or "")..((self.conf.buffs.onlyMine and not canAttack) and "|PLAYER" or "")
+	local debuffFilter = "HARMFUL"..((not canAttack and self.conf.debuffs.curable == 1) and "|RAID" or "")..((self.conf.debuffs.onlyMine and canAttack) and "|PLAYER" or "")
 	-- XPerlDB.buffs.cooldown is a single global setting shared by buffs and
 	-- debuffs by design (its own options-panel description says so) -- there
 	-- is no XPerlDB.debuffs table. Do not split this into a per-type value.
 	local showSwipe = conf.buffs.cooldown and true or false
-	local lineSize = self.conf.buffs.wrap and self.buffFrame:GetWidth() or 2000
+	-- Wrap at the frame's full width, the same row width as the normal layout
+	-- (XPerl_Unit_BuffSpacing), not the narrower buffFrame
+	local lineSize = 2000
+	if (self.conf.buffs.wrap) then
+		lineSize = self.statsFrame:GetWidth()
+		if (self.portraitFrame and self.portraitFrame:IsShown()) then
+			lineSize = lineSize - 2 + self.portraitFrame:GetWidth()
+		end
+		if (self.levelFrame and self.levelFrame:IsShown()) then
+			lineSize = lineSize - 2 + self.levelFrame:GetWidth()
+		end
+	end
+
+	-- Same row limit as the normal layout ("Target Buff Rows"): at most that many
+	-- rows of icons per group when wrapping
+	local rows = self.conf.buffs.rows
+	local function MaxIcons(size)
+		if (self.conf.buffs.wrap and rows and rows > 0) then
+			return min(40, max(1, floor((lineSize + 1) / (size + 1))) * rows)
+		end
+	end
+	local buffMax, debuffMax = MaxIcons(self.conf.buffs.size), MaxIcons(self.conf.debuffs.size)
+	-- "Key Enemy Buffs": on enemies show only important buffs, then purgeable ones
+	-- (a second group, so an aura that is both appears once)
+	local keyBuffs = self.conf.buffs.keyOnly and canAttack
+	if (keyBuffs) then
+		buffFilter = "HELPFUL|IMPORTANT"
+	end
 
 	-- buffFrame and debuffFrame are one XML rectangle, so each container takes
 	-- half, friend/enemy deciding which goes on top.
 	local buffContainer, buffHalf = XPerl_AuraContainer_Create(self, "buffHalfFrame",
-		self:GetName().."AuraBuffs", "buffs", "HELPFUL", self.conf.buffs.size, lineSize, showSwipe)
+		self:GetName().."AuraBuffs", "buffs", buffFilter, self.conf.buffs.size, lineSize, showSwipe, buffMax)
+	if (keyBuffs) then
+		XPerl_AuraContainer_AddGroup(self, buffContainer, "buffsPurgeable", "HELPFUL|DISPELLABLE|!IMPORTANT", self.conf.buffs.size, showSwipe, buffMax, 2)
+	end
 	local debuffContainer, debuffHalf = XPerl_AuraContainer_Create(self, "debuffHalfFrame",
-		self:GetName().."AuraDebuffs", "debuffs", "HARMFUL", self.conf.debuffs.size, lineSize, showSwipe)
+		self:GetName().."AuraDebuffs", "debuffs", debuffFilter, self.conf.debuffs.size, lineSize, showSwipe, debuffMax)
 
 	local firstHalf, secondHalf = buffHalf, debuffHalf
 	if (not buffsFirst) then

@@ -8959,6 +8959,24 @@
 						</Scripts>
 					</CheckButton>
 
+					<CheckButton name="$parent_KeyBuffs" inherits="XPerlCheckButtonTemplate">
+						<Anchors>
+							<Anchor point="LEFT" relativeTo="$parent_BuffsFirst" relativePoint="RIGHT">
+								<Offset>
+									<AbsDimension x="80" y="0"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnLoad>
+								XPerl_OptionsSetMyText(self, "XPERL_CONF_TARGET_KEYBUFFS")
+								self.configBase = "XPerlDB.target.buffs"
+								self.configIndex = "keyOnly"
+								self.configClick = XPerl_Target_Reset
+							</OnLoad>
+						</Scripts>
+					</CheckButton>
+
 					<CheckButton name="$parent_DebuffHighlight" inherits="XPerlCheckButtonTemplate">
 						<Anchors>
 							<Anchor point="TOPLEFT" relativeTo="$parent_Above" relativePoint="BOTTOMLEFT">
@@ -10534,6 +10552,24 @@
 								self.flashFrame = {XPerl_FocusbuffFrame, XPerl_FocusdebuffFrame}
 								self.configBase = "XPerlDB.focus.buffs"
 								self.configIndex = "first"
+								self.configClick = XPerl_Target_Reset
+							</OnLoad>
+						</Scripts>
+					</CheckButton>
+
+					<CheckButton name="$parent_KeyBuffs" inherits="XPerlCheckButtonTemplate">
+						<Anchors>
+							<Anchor point="LEFT" relativeTo="$parent_BuffsFirst" relativePoint="RIGHT">
+								<Offset>
+									<AbsDimension x="80" y="0"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnLoad>
+								XPerl_OptionsSetMyText(self, "XPERL_CONF_FOCUS_KEYBUFFS")
+								self.configBase = "XPerlDB.focus.buffs"
+								self.configIndex = "keyOnly"
 								self.configClick = XPerl_Target_Reset
 							</OnLoad>
 						</Scripts>

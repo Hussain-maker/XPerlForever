@@ -147,8 +147,8 @@ end
 
 -- Restricted-aura mode (R2b) ------------------------------------------------
 -- While XPerl_AurasSecret() is true the frames show buffs through Blizzard's
--- AuraContainer; the blacklist is handed to its buff group as a candidate
--- filter. "Show if mine" cannot be honoured there (one group).
+-- AuraContainer; the blacklist is handed to its buff groups as a candidate
+-- filter. "Show if mine" cannot be honoured there.
 
 local GetSpellAuraSecrecy = C_Secrets and C_Secrets.GetSpellAuraSecrecy
 local NEVER_SECRET = Enum and Enum.SecrecyLevel and Enum.SecrecyLevel.NeverSecret
@@ -159,7 +159,7 @@ local filtersAll = FILTERS_NONE	-- {excludeSpellIDs = every listed ID}
 local filtersNS = FILTERS_NONE	-- {excludeSpellIDs = never-secret listed IDs}
 local setsDirty = true			-- rebuild the sets on next use
 local liveContainers = {}		-- [frame] = its current buff AuraContainer
-local liveKeys = {}				-- [frame] = that container's group key
+local liveKeys = {}				-- [frame] = list of that container's buff group keys
 local appliedFilters = {}		-- [frame] = filters table last applied to its current container
 local pendingApply
 local retryTicker
@@ -235,7 +235,11 @@ local function ApplyContainer(frame, fresh)
 		appliedFilters[frame] = filters
 		return
 	end
-	if (pcall(container.SetAuraGroupCandidateFilters, container, liveKeys[frame], filters)) then
+	local ok = true
+	for _, key in ipairs(liveKeys[frame]) do
+		ok = pcall(container.SetAuraGroupCandidateFilters, container, key, filters) and ok
+	end
+	if (ok) then
 		appliedFilters[frame] = filters
 		if (not fresh and container:IsShown() and container.UpdateAllAuras) then
 			container:UpdateAllAuras()
@@ -276,11 +280,15 @@ end
 -- Called by XPerl_AuraContainer_Create for every new group. A new group is not
 -- live yet, so it may be configured even while auras are secret.
 function XPerl_BuffContainerFilter(frame, container, groupKey, filter)
-	if (filter ~= "HELPFUL" or not frame or not filteredUnits[frame.partyid]) then
+	if (type(filter) ~= "string" or filter:find("HELPFUL", 1, true) ~= 1 or not frame or not filteredUnits[frame.partyid]) then
 		return
 	end
-	liveContainers[frame] = container
-	liveKeys[frame] = groupKey
+	-- A frame's buff container can hold several buff groups: collect their keys
+	if (liveContainers[frame] ~= container) then
+		liveContainers[frame] = container
+		liveKeys[frame] = {}
+	end
+	tinsert(liveKeys[frame], groupKey)
 	appliedFilters[frame] = nil
 	ApplyContainer(frame, true)
 end
