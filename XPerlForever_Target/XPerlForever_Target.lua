@@ -449,9 +449,13 @@ local function XPerl_Target_AuraContainer_Setup(self)
 	firstHalf:ClearAllPoints()
 	firstHalf:SetPoint("TOPLEFT", self.buffFrame, "TOPLEFT", 0, 0)
 	firstHalf:SetPoint("BOTTOMRIGHT", self.buffFrame, "RIGHT", 0, 0)
+	-- The second group starts right below the first group's icons, so it moves
+	-- up into the first row when the first group is empty
+	local firstContainer = buffsFirst and buffContainer or debuffContainer
 	secondHalf:ClearAllPoints()
-	secondHalf:SetPoint("TOPLEFT", self.buffFrame, "LEFT", 0, 0)
-	secondHalf:SetPoint("BOTTOMRIGHT", self.buffFrame, "BOTTOMRIGHT", 0, 0)
+	secondHalf:SetPoint("TOPLEFT", firstContainer, "BOTTOMLEFT", 0, -1)
+	secondHalf:SetPoint("RIGHT", self.buffFrame, "RIGHT", 0, 0)
+	secondHalf:SetHeight(1)
 
 	self.buffContainer, self.debuffContainer = buffContainer, debuffContainer
 end

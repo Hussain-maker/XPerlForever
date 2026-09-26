@@ -3567,6 +3567,10 @@ function XPerl_Unit_BuffPositions(self, buffList1, buffList2, size1, size2)
 		if (buffList1) then
 			XPerl_Unit_BuffPositionsType(self, buffList1, true, size1)
 		end
+		-- An empty first row takes no space: the second row starts at the top
+		if (not (buffList1 and buffList1[1] and buffList1[1]:IsShown())) then
+			self.prevBuff = nil
+		end
 		if (buffList2) then
 			XPerl_Unit_BuffPositionsType(self, buffList2, false, size2)
 		end
