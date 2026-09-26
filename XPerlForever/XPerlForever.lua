@@ -2243,8 +2243,12 @@ function XPerl_PlayerTip(self, unitid)
 
 	GameTooltip_SetDefaultAnchor(GameTooltip, self)
 	GameTooltip:SetUnit(unitid)
-	local r, g, b = GameTooltip_UnitColor(unitid)
-	GameTooltipTextLeft1:SetTextColor(r, g, b)
+	-- Called from addon code, GameTooltip_UnitColor errors on secret unit values
+	-- (enemies in combat); SetUnit has already coloured the name, so keep that
+	local ok, r, g, b = pcall(GameTooltip_UnitColor, unitid)
+	if (ok and r) then
+		GameTooltipTextLeft1:SetTextColor(r, g, b)
+	end
 	GameTooltip:Show()
 
 	if (XPerl_RaidTipExtra) then
