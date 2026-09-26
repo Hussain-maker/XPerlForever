@@ -2083,6 +2083,15 @@ function XPerl_SetManaBarType(self)
 				colourKey = PowerTokenColours[powerToken]
 			end
 			local c = colourKey and ((conf.colour.bar and conf.colour.bar[colourKey]) or DefaultPowerColours[colourKey])
+			-- Power types X-Perl has no colour for (Astral Power, Runic Power, ...) use Blizzard's colour
+			if not c and PowerBarColor then
+				if XPerl_CanAccess(powerToken) then
+					c = PowerBarColor[powerToken]
+				end
+				if not c and XPerl_CanAccess(p) then
+					c = PowerBarColor[p]
+				end
+			end
 			if (c) then
 				m:SetStatusBarColor(c.r, c.g, c.b, 1)
 				m.bg:SetVertexColor(c.r, c.g, c.b, 0.25)
