@@ -1,0 +1,19 @@
+## Interface: 120005, 120007, 120100, 16001, 20505, 20506, 11507, 11508
+## IconTexture: Interface\AddOns\XPerlForever\XPerlForeverIcon
+## Version: 1.0.2
+## Author: Ziliya; based on work by Resike and Halfdays
+## Title: X-Perl Forever |cffeda55fPlayer|r
+## Title-itIT: X-Perl Forever |cffeda55fGiocatore|r
+## Title-ruRU: X-Perl Forever |cffeda55fИгрок|r
+## Title-deDE: X-Perl Forever |cffeda55fSpieler|r
+## Title-zhCN: X-Perl Forever |cffeda55f玩家窗|r
+## Title-zhTW: X-Perl Forever |cffeda55f玩家單位框架|r
+## Notes: Replaces the default player frame.
+## Notes-itIT: Rimpiazza la finestra del giocatore.
+## Notes-ruRU: Заменяет стандартный фрейм игрока.
+## Notes-deDE: Ersetzt das Spielerfenster.
+## Notes-zhTW: 替換並增強的玩家單位頭像框架
+## RequiredDeps: XPerlForever
+## OptionalDeps: XPerlForever_ArcaneBar
+
+XPerlForever_Player.xml

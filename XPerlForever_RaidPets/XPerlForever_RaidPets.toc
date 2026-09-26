@@ -1,0 +1,18 @@
+## Interface: 120005, 120007, 120100, 16001, 20505, 20506, 11507, 11508
+## IconTexture: Interface\AddOns\XPerlForever\XPerlForeverIcon
+## Version: 1.0.2
+## Author: Ziliya; based on work by Resike and Halfdays
+## Title: X-Perl Forever |cffeda55fRaid Pets|r
+## Title-itIT: X-Perl Forever |cffeda55fFamigli Incursione|r
+## Title-ruRU: X-Perl Forever |cffeda55fПитомцы рейда|r
+## Title-deDE: X-Perl Forever |cffeda55fSchlachtzugsbegleiter|r
+## Title-zhCN: X-Perl Forever |cffeda55f团队宠物窗|r
+## Title-zhTW: X-Perl Forever |cffeda55f團隊寵物框架|r
+## Notes: X-Perl Forever Raid pets
+## Notes-itIT: Famigli dell'incursione di X-Perl Forever
+## Notes-ruRU: Фреймы питомцев рейда.
+## Notes-deDE: X-Perl Forever Schlachtzugsbegleiter
+## Notes-zhTW: X-Perl Forever 團隊寵物框架
+## Dependencies: XPerlForever, XPerlForever_RaidFrames
+
+XPerlForever_RaidPets.xml

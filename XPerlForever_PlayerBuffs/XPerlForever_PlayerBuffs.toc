@@ -1,0 +1,19 @@
+## Interface: 120005, 120007, 120100, 16001, 20505, 20506, 11507, 11508
+## IconTexture: Interface\AddOns\XPerlForever\XPerlForeverIcon
+## Version: 1.0.2
+## Author: Ziliya; based on work by Resike and Halfdays
+## Title: X-Perl Forever |cffeda55fPlayer Buffs|r
+## Title-itIT: X-Perl Forever |cffeda55fBenefici Giocatore|r
+## Title-ruRU: X-Perl Forever |cffeda55fБаффы игрока|r
+## Title-deDE: X-Perl Forever |cffeda55fSpielerbuffs|r
+## Title-zhCN: X-Perl Forever |cffeda55f玩家Buff|r
+## Title-zhTW: X-Perl Forever |cffeda55f玩家增益狀態|r
+## Notes: Gives buff icons on the X-Perl Forever player frame.
+## Notes-itIT: Gestisce i benefici e le penalità del giocatore.
+## Notes-ruRU: Отображает иконки баффов на фрейме игрока.
+## Notes-deDE: Zeigt die Buffsymbole am X-Perl Forever Spielerfenster an.
+## Notes-zhTW: 給予 X-Perl Forever 玩家單位框架增益狀態圖標功能
+## RequiredDeps: XPerlForever, XPerlForever_Player
+
+XPerlForever_PlayerBuffs.lua
+XPerlForever_PlayerBuffs.xml

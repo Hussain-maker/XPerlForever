@@ -1,0 +1,19 @@
+## Interface: 120005, 120007, 120100, 16001, 20505, 20506, 11507, 11508
+## IconTexture: Interface\AddOns\XPerlForever\XPerlForeverIcon
+## Version: 1.0.2
+## Author: Ziliya; based on work by Resike and Halfdays
+## Title: X-Perl Forever |cffeda55fParty Pet|r
+## Title-itIT: X-Perl Forever |cffeda55fFamigli Gruppo|r
+## Title-ruRU: X-Perl Forever |cffeda55fПитомцы группы|r
+## Title-deDE: X-Perl Forever |cffeda55fGruppenbegleiter|r
+## Title-zhCN: X-Perl Forever |cffeda55f队友宠物窗|r
+## Title-zhTW: X-Perl Forever |cffeda55f隊友寵物|r
+## Notes: Replaces the default party's pet frames.
+## Notes-itIT: Rimpiazza le finestre dei famigli del gruppo.
+## Notes-ruRU: Заменяет стандартные фреймы питомцев группы.
+## Notes-deDE: Ersetzt die Begleiterfenster der Gruppe.
+## Notes-zhTW: 提供增強的隊員寵物框架
+## RequiredDeps: XPerlForever, XPerlForever_Party
+## OptionalDeps: XPerlForever_ArcaneBar
+
+XPerlForever_PartyPet.xml

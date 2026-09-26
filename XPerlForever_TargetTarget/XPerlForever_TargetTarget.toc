@@ -1,0 +1,18 @@
+## Interface: 120005, 120007, 120100, 16001, 20505, 20506, 11507, 11508
+## IconTexture: Interface\AddOns\XPerlForever\XPerlForeverIcon
+## Version: 1.0.2
+## Author: Ziliya; based on work by Resike and Halfdays
+## Title: X-Perl Forever |cffeda55fTarget's Target|r
+## Title-itIT: X-Perl Forever |cffeda55fBersaglio del Bersaglio|r
+## Title-ruRU: X-Perl Forever |cffeda55fЦель цели|r
+## Title-deDE: X-Perl Forever |cffeda55fZiel des Ziels|r
+## Title-zhCN: X-Perl Forever |cffeda55f目标的目标窗|r
+## Title-zhTW: X-Perl Forever |cffeda55f目標的目標|r
+## Notes: Replaces the default Target of Target frame.
+## Notes-itIT: Rimpiazza la finestra del bersaglio del bersaglio.
+## Notes-ruRU: Заменяет стандартный фрейм цели->цели.
+## Notes-deDE: Ersetzt das Fenster für Ziel des Ziels.
+## Notes-zhTW: 顯示目標的目標框架.
+## RequiredDeps: XPerlForever, XPerlForever_Target
+
+XPerlForever_TargetTarget.xml

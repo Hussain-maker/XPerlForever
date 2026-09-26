@@ -1,0 +1,17 @@
+## Interface: 120005, 120007, 120100, 16001, 20505, 20506, 11507, 11508
+## IconTexture: Interface\AddOns\XPerlForever\XPerlForeverIcon
+## Version: 1.0.2
+## Author: Ziliya; based on work by Resike and Halfdays
+## Title: X-Perl Forever |cffeda55fCustom Highlight|r
+## Title-itIT: X-Perl Forever |cffeda55fEvidenziazioni Personalizzate|r
+## Title-ruRU: X-Perl Forever |cffeda55fВыделение|r
+## Title-zhCN: X-Perl Forever |cffeda55f自定义Debuff高亮|r
+## Title-zhTW: X-Perl Forever |cffeda55f自定義減益高亮監視模組|r
+## Notes: Custom highlights module allowing definition of frame by frame indicator of important debuffs.
+## Notes-itIT: Modulo che fornisce le evidenziazioni personalizzate di importanti penalità.
+## Notes-ruRU: Модуль выделений - позволяет выделять важные дебаффы.
+## Notes-zhTW: 自定義減益高亮監視模組可讓您逐個框架地自定義高亮顯示重要的 debuffs(減益效果)
+## RequiredDeps: XPerlForever
+## LoadOnDemand: 1
+
+XPerlForever_CustomHighlight.lua

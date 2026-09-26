@@ -1,0 +1,19 @@
+## Interface: 120005, 120007, 120100, 16001, 20505, 20506, 11507, 11508
+## IconTexture: Interface\AddOns\XPerlForever\XPerlForeverIcon
+## Version: 1.0.2
+## Author: Ziliya; based on work by Resike and Halfdays
+## Title: X-Perl Forever |cffeda55fRaid Frames|r
+## Title-itIT: X-Perl Forever |cffeda55fIncursione|r
+## Title-ruRU: X-Perl Forever |cffeda55fРейд|r
+## Title-deDE: X-Perl Forever |cffeda55fSchlachtzugsfenster|r
+## Title-zhCN: X-Perl Forever |cffeda55f团队窗|r
+## Title-zhTW: X-Perl Forever |cffeda55f團隊框架|r
+## Notes: X-Perl Forever Raid frames
+## Notes-itIT: Finestre incursione di X-Perl Forever
+## Notes-ruRU: Фреймы рейда.
+## Notes-deDE: X-Perl Forever |cffeda55fSchlachtzugfenster|r
+## Notes-zhTW: X-Perl Forever 團隊框架
+## Dependencies: XPerlForever
+## SavedVariablesPerCharacter: ZPerl_Roster
+
+XPerlForever_Raid.xml

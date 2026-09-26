@@ -1,0 +1,18 @@
+## Interface: 120005, 120007, 120100, 16001, 20505, 20506, 11507, 11508
+## IconTexture: Interface\AddOns\XPerlForever\XPerlForeverIcon
+## Version: 1.0.2
+## Author: Ziliya; based on work by Resike and Halfdays
+## Title: X-Perl Forever |cffeda55fPlayer Pet|r
+## Title-itIT: X-Perl Forever |cffeda55fFamiglio Giocatore|r
+## Title-ruRU: X-Perl Forever |cffeda55fПитомец игрока|r
+## Title-deDE: X-Perl Forever |cffeda55fSpielerbegleiter|r
+## Title-zhCN: X-Perl Forever |cffeda55f玩家宠物|r
+## Title-zhTW: X-Perl Forever |cffeda55f玩家寵物|r
+## Notes: Replaces the default player's pet frame.
+## Notes-itIT: Rimpiazza la finestra del famiglio del giocatore.
+## Notes-ruRU: Заменяет стандартный фрейм питомца игрока.
+## Notes-deDE: Ersetzt das Begleiterfenster des Spielers.
+## Notes-zhTW: 顯示玩家單位的寵物框架
+## RequiredDeps: XPerlForever, XPerlForever_Player
+
+XPerlForever_PlayerPet.xml

@@ -1,0 +1,18 @@
+## Interface: 120005, 120007, 120100, 16001, 20505, 20506, 11507, 11508
+## IconTexture: Interface\AddOns\XPerlForever\XPerlForeverIcon
+## Version: 1.0.2
+## Author: Ziliya; based on work by Resike and Halfdays
+## Title: X-Perl Forever |cffeda55fOptions|r |cFF40FF40(LoadOnDemand)|r
+## Title-itIT: X-Perl Forever |cffeda55fOpzioni|r |cFF40FF40(Caricabile su richiesta)|r
+## Title-ruRU: X-Perl Forever |cffeda55fНастройки|r |cFF40FF40(LoadOnDemand)|r
+## Title-zhCN: X-Perl Forever |cffeda55f选项|r |cFF40FF40(LoadOnDemand)|r
+## Title-zhTW: X-Perl Forever |cffeda55f功能設定|r |cFF40FF40(隨機載入)|r
+## Notes: X-Perl Forever Options GUI
+## Notes-itIT: Finestra opzioni di X-Perl Forever
+## Notes-ruRU: Интерфейс настроек X-Perl Forever'а
+## Notes-deDE: X-Perl Forever UnitFrames Optionen GUI
+## Notes-zhTW: X-Perl Forever 單位框架功能設定 GUI
+## RequiredDeps: XPerlForever
+## LoadOnDemand: 1
+
+XPerlForever_FrameOptions.xml

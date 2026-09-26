@@ -1,0 +1,21 @@
+## Interface: 120005, 120007, 120100, 16001, 20505, 20506, 11507, 11508
+## IconTexture: Interface\AddOns\XPerlForever\XPerlForeverIcon
+## Version: 1.0.2
+## Author: Ziliya; based on work by Resike and Halfdays
+## Title: X-Perl Forever |cffeda55fRaid Admin|r
+## Title-itIT: X-Perl Forever |cffeda55fAmministrazione Incursione|r
+## Title-ruRU: X-Perl Forever |cffeda55fРейд админ|r
+## Title-deDE: X-Perl Forever |cffeda55fSchlachtzugsadmin|r
+## Title-zhCN: X-Perl Forever |cffeda55f团队管理|r
+## Title-zhTW: X-Perl Forever |cffeda55f團隊管理|r
+## Notes: Provides useful raid admin tools for todays raid leader.
+## Notes-itIT: Fornisce degli strumenti utili agli ufficiali delle incursioni.
+## Notes-ruRU: Обеспечивает рейд лидера полезными инструментами рейд админа.
+## Notes-deDE: Bietet Schlachtzugsleitern nützliche Einstellungsmöglichkeiten.
+## Notes-zhTW: 提供團隊管理工具給予領隊以方便地整合人員
+## SavedVariablesPerCharacter: ZPerl_Admin, ZPerl_CheckItems
+## RequiredDeps: XPerlForever
+
+XPerlForever_RaidAdmin.xml
+XPerlForever_Check.xml
+XPerlForever_RosterText.xml
