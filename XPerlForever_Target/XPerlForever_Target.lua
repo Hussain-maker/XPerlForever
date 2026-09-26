@@ -1011,9 +1011,33 @@ local function XPerl_Target_UpdateType(self)
 				XPerl_SafeSetWidthFromText(self.bossFrame, self.bossFrame.text, 10, 70)
 			else
 				if (UnitIsPlayer(partyid) or not UnitPlayerControlled(partyid)) then
-					local l, r, t, b = XPerl_ClassPos(LocalClass)
-					self.typeFramePlayer.classTexture:SetTexCoord(l, r, t, b)
-					self.typeFramePlayer:Show()
+					local tex = self.typeFramePlayer.classTexture
+					if (not XPerl_CanAccess(LocalClass)) then
+						-- Class hidden (enemies in arena): the arena opponent's spec is not,
+						-- so take the class from it when this unit is one of them
+						for i = 1, 5 do
+							local isOpponent = UnitIsUnit(partyid, "arena"..i)
+							if (XPerl_CanAccess(isOpponent) and isOpponent) then
+								local specID = GetArenaOpponentSpec and GetArenaOpponentSpec(i)
+								local specClass = XPerl_CanAccess(specID) and specID > 0 and select(6, GetSpecializationInfoByID(specID))
+								if (specClass) then
+									LocalClass = specClass
+								end
+								break
+							end
+						end
+					end
+					if (XPerl_CanAccess(LocalClass)) then
+						tex:SetTexture("Interface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes")
+						tex:SetTexCoord(XPerl_ClassPos(LocalClass))
+						self.typeFramePlayer:Show()
+					elseif (GetClassAtlas and pcall(tex.SetAtlas, tex, GetClassAtlas(LocalClass))) then
+						-- Class hidden (enemies in arena): the game resolves the icon itself
+						self.typeFramePlayer:Show()
+					else
+						-- Unknown class: no icon rather than a wrong one
+						self.typeFramePlayer:Hide()
+					end
 				end
 			end
 		end
