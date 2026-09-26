@@ -8940,6 +8940,25 @@
 						</Scripts>
 					</CheckButton>
 
+					<CheckButton name="$parent_BuffsFirst" inherits="XPerlCheckButtonTemplate">
+						<Anchors>
+							<Anchor point="LEFT" relativeTo="$parent_Above" relativePoint="RIGHT">
+								<Offset>
+									<AbsDimension x="80" y="0"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnLoad>
+								XPerl_OptionsSetMyText(self, "XPERL_CONF_TARGET_BUFFSFIRST")
+								self.flashFrame = {XPerl_TargetbuffFrame, XPerl_TargetdebuffFrame}
+								self.configBase = "XPerlDB.target.buffs"
+								self.configIndex = "first"
+								self.configClick = XPerl_Target_Reset
+							</OnLoad>
+						</Scripts>
+					</CheckButton>
+
 					<CheckButton name="$parent_DebuffHighlight" inherits="XPerlCheckButtonTemplate">
 						<Anchors>
 							<Anchor point="TOPLEFT" relativeTo="$parent_Above" relativePoint="BOTTOMLEFT">
@@ -10496,6 +10515,25 @@
 								self.flashFrame = {XPerl_FocusbuffFrame, XPerl_FocusdebuffFrame}
 								self.configBase = "XPerlDB.focus.buffs"
 								self.configIndex = "above"
+								self.configClick = XPerl_Target_Reset
+							</OnLoad>
+						</Scripts>
+					</CheckButton>
+
+					<CheckButton name="$parent_BuffsFirst" inherits="XPerlCheckButtonTemplate">
+						<Anchors>
+							<Anchor point="LEFT" relativeTo="$parent_Above" relativePoint="RIGHT">
+								<Offset>
+									<AbsDimension x="80" y="0"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnLoad>
+								XPerl_OptionsSetMyText(self, "XPERL_CONF_FOCUS_BUFFSFIRST")
+								self.flashFrame = {XPerl_FocusbuffFrame, XPerl_FocusdebuffFrame}
+								self.configBase = "XPerlDB.focus.buffs"
+								self.configIndex = "first"
 								self.configClick = XPerl_Target_Reset
 							</OnLoad>
 						</Scripts>

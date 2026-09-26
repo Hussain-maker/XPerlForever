@@ -412,7 +412,7 @@ local function XPerl_Target_BuffPositions(self)
 	-- (pattern 12); ported here too, since self.partyid ("target"/"focus") is
 	-- a direct unit whose identity -- and so this call -- can still be secret
 	-- inside an instance (section 3).
-	if (self.partyid and XPerl_SafeBool(UnitCanAttack("player", self.partyid), false)) then
+	if (self.partyid and not self.conf.buffs.first and XPerl_SafeBool(UnitCanAttack("player", self.partyid), false)) then
 		XPerl_Unit_BuffPositions(self, self.buffFrame.debuff, self.buffFrame.buff, self.conf.debuffs.size, self.conf.buffs.size)
 	else
 		XPerl_Unit_BuffPositions(self, self.buffFrame.buff, self.buffFrame.debuff, self.conf.buffs.size, self.conf.debuffs.size)
@@ -428,7 +428,7 @@ local function XPerl_Target_AuraContainer_Setup(self)
 		return
 	end
 
-	local buffsFirst = not XPerl_SafeBool(UnitCanAttack("player", self.partyid), false)
+	local buffsFirst = self.conf.buffs.first or not XPerl_SafeBool(UnitCanAttack("player", self.partyid), false)
 	-- XPerlDB.buffs.cooldown is a single global setting shared by buffs and
 	-- debuffs by design (its own options-panel description says so) -- there
 	-- is no XPerlDB.debuffs table. Do not split this into a per-type value.
