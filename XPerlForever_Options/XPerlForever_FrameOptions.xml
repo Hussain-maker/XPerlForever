@@ -10575,6 +10575,24 @@
 						</Scripts>
 					</CheckButton>
 
+					<CheckButton name="$parent_CCOnly" inherits="XPerlCheckButtonTemplate">
+						<Anchors>
+							<Anchor point="TOPLEFT" relativeTo="$parent_KeyBuffs" relativePoint="BOTTOMLEFT">
+								<Offset>
+									<AbsDimension x="0" y="6"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnLoad>
+								XPerl_OptionsSetMyText(self, "XPERL_CONF_FOCUS_CCONLY")
+								self.configBase = "XPerlDB.focus.debuffs"
+								self.configIndex = "ccOnly"
+								self.configClick = XPerl_Target_Reset
+							</OnLoad>
+						</Scripts>
+					</CheckButton>
+
 					<CheckButton name="$parent_DebuffHighlight" inherits="XPerlCheckButtonTemplate">
 						<Anchors>
 							<Anchor point="TOPLEFT" relativeTo="$parent_Above" relativePoint="BOTTOMLEFT">

@@ -248,12 +248,25 @@ local function XPerl_TargetTarget_AuraContainer_Setup(self)
 
 	local debuffsFirst = XPerl_SafeBool(UnitCanAttack("player", self.partyid), false)
 	local showSwipe = conf.buffs.cooldown and true or false
-	local lineSize = self.conf.buffs.wrap and self.buffFrame:GetWidth() or 2000
+	-- Wrap at the frame's full width and cap the rows, like the normal layout
+	local lineSize = 2000
+	if (self.conf.buffs.wrap) then
+		lineSize = self.statsFrame:GetWidth()
+		if (self.levelFrame and self.levelFrame:IsShown()) then
+			lineSize = lineSize - 2 + self.levelFrame:GetWidth()
+		end
+	end
+	local rows = self.conf.buffs.rows
+	local function MaxIcons(size)
+		if (self.conf.buffs.wrap and rows and rows > 0) then
+			return min(40, max(1, floor((lineSize + 1) / (size + 1))) * rows)
+		end
+	end
 
 	local buffContainer, buffHalf = XPerl_AuraContainer_Create(self, "buffHalfFrame",
-		self:GetName().."AuraBuffs", "buffs", "HELPFUL", self.conf.buffs.size, lineSize, showSwipe)
+		self:GetName().."AuraBuffs", "buffs", "HELPFUL", self.conf.buffs.size, lineSize, showSwipe, MaxIcons(self.conf.buffs.size))
 	local debuffContainer, debuffHalf = XPerl_AuraContainer_Create(self, "debuffHalfFrame",
-		self:GetName().."AuraDebuffs", "debuffs", "HARMFUL", self.conf.debuffs.size, lineSize, showSwipe)
+		self:GetName().."AuraDebuffs", "debuffs", "HARMFUL", self.conf.debuffs.size, lineSize, showSwipe, MaxIcons(self.conf.debuffs.size))
 
 	local firstHalf, secondHalf = buffHalf, debuffHalf
 	if (debuffsFirst) then

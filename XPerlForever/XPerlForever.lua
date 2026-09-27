@@ -3709,6 +3709,8 @@ function XPerl_Unit_UpdateBuffs(self, maxBuffs, maxDebuffs, castableOnly, curabl
 		local canAttack = UnitCanAttack("player", partyid)
 		canAttack = XPerl_CanAccess(canAttack) and canAttack
 		local isFriendly = not canAttack
+		-- "Key Enemy Buffs" (target/focus): on enemies keep only important or dispellable buffs
+		local isFilteredOut = canAttack and self.conf.buffs.keyOnly and C_UnitAuras and C_UnitAuras.IsAuraFilteredOutByInstanceID
 
 		if (self.conf.buffs.enable and maxBuffs and maxBuffs > 0) then
 			local buffIconIndex = 1
@@ -3760,7 +3762,14 @@ function XPerl_Unit_UpdateBuffs(self, maxBuffs, maxDebuffs, castableOnly, curabl
 
 					-- Z-Perl Forever: optional hook XPerl_BuffFilter(frame, unit, spellID, auraInstanceID, isPlayer),
 					-- called for buffs that would be shown; return true to hide the buff (no gap, not counted).
-					if (icon and (((mine == 1) and (isPlayer or stealable)) or ((mine == 2) and not (isPlayer or stealable))) and not (XPerl_BuffFilter and XPerl_BuffFilter(self, partyid, spellID, auraInstanceID, isPlayer))) then
+					local notKey
+					if (isFilteredOut and auraInstanceID and XPerl_CanAccess(auraInstanceID)) then
+						local notImportant = isFilteredOut(partyid, auraInstanceID, "HELPFUL|IMPORTANT")
+						local notDispellable = isFilteredOut(partyid, auraInstanceID, "HELPFUL|DISPELLABLE")
+						notKey = XPerl_CanAccess(notImportant) and XPerl_CanAccess(notDispellable) and notImportant and notDispellable
+					end
+
+					if (icon and not notKey and (((mine == 1) and (isPlayer or stealable)) or ((mine == 2) and not (isPlayer or stealable))) and not (XPerl_BuffFilter and XPerl_BuffFilter(self, partyid, spellID, auraInstanceID, isPlayer))) then
 						local button = XPerl_GetBuffButton(self, buffIconIndex, 0, true, buffnum)
 						button.filter = filter
 						button:SetAlpha(1)
@@ -3861,8 +3870,10 @@ function XPerl_Unit_UpdateBuffs(self, maxBuffs, maxDebuffs, castableOnly, curabl
 			self.debuffFrame:Show()
 			lastIcon = 0
 			local mineMap
+			-- "CC Debuffs Only" (focus): crowd control from anyone, so "only mine" doesn't apply
+			local ccOnly = self.conf.debuffs.ccOnly
 			for mine = 1, 2 do
-				if (self.conf.debuffs.onlyMine and mine == 2) then
+				if (self.conf.debuffs.onlyMine and mine == 2 and not ccOnly) then
 					if (canAttack) then
 						break
 					end
@@ -3871,7 +3882,7 @@ function XPerl_Unit_UpdateBuffs(self, maxBuffs, maxDebuffs, castableOnly, curabl
 				end
 
 				for buffnum = 1, maxDebuffs do
-					local filter = (isFriendly and curableOnly == 1) and "HARMFUL|RAID" or "HARMFUL"
+					local filter = ccOnly and "HARMFUL|CROWD_CONTROL" or ((isFriendly and curableOnly == 1) and "HARMFUL|RAID" or "HARMFUL")
 					local name, icon, count, debuffType, duration, expirationTime, unitCaster, canStealOrPurge, nameplateShowPersonal, spellID, _, auraInstanceID, isMine = XPerl_UnitDebuff(partyid, buffnum, filter)
 
 					if (not name) then

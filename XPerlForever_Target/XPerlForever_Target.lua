@@ -434,6 +434,9 @@ local function XPerl_Target_AuraContainer_Setup(self)
 	-- enemy debuffs, "curable" only for friendly debuffs. Blizzard applies them.
 	local buffFilter = "HELPFUL"..(self.conf.buffs.castable == 1 and "|RAID" or "")..((self.conf.buffs.onlyMine and not canAttack) and "|PLAYER" or "")
 	local debuffFilter = "HARMFUL"..((not canAttack and self.conf.debuffs.curable == 1) and "|RAID" or "")..((self.conf.debuffs.onlyMine and canAttack) and "|PLAYER" or "")
+	if (self.conf.debuffs.ccOnly) then
+		debuffFilter = "HARMFUL|CROWD_CONTROL"
+	end
 	-- XPerlDB.buffs.cooldown is a single global setting shared by buffs and
 	-- debuffs by design (its own options-panel description says so) -- there
 	-- is no XPerlDB.debuffs table. Do not split this into a per-type value.
