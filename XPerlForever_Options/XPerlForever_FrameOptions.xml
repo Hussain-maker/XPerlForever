@@ -4824,6 +4824,23 @@
 						</Scripts>
 					</CheckButton>
 
+					<CheckButton name="$parent_NoCastFlash" inherits="XPerlCheckButtonTemplate">
+						<Anchors>
+							<Anchor point="TOPLEFT" relativeTo="$parent_XPerlOldRoleIcons" relativePoint="BOTTOMLEFT">
+								<Offset>
+									<AbsDimension x="0" y="6"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnLoad>
+								XPerl_OptionsSetMyText(self, "XPERL_CONF_NOCASTFLASH")
+								self.configBase = "XPerlDB"
+								self.configIndex = "castBarNoFlash"
+							</OnLoad>
+						</Scripts>
+					</CheckButton>
+
 					<CheckButton name="$parent_SettingsMethod" inherits="XPerlCheckButtonTemplate">
 						<Anchors>
 							<Anchor point="TOPLEFT" relativePoint="BOTTOMRIGHT">

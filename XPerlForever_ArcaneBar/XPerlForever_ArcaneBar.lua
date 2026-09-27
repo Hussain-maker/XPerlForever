@@ -561,11 +561,16 @@ function XPerl_ArcaneBar_OnUpdate(self, elapsed)
 	elseif (getTime < self.holdTime) then
 		return
 	elseif (self.flash) then
-		local alpha = self.barFlash:GetAlpha() + elapsed * 3	-- CASTING_BAR_FLASH_STEP
-		if (alpha < 1) then
-			self.barFlash:SetAlpha(alpha)
-		else
+		if (conf.castBarNoFlash) then
+			self.barFlash:Hide()
 			self.flash = nil
+		else
+			local alpha = self.barFlash:GetAlpha() + elapsed * 3	-- CASTING_BAR_FLASH_STEP
+			if (alpha < 1) then
+				self.barFlash:SetAlpha(alpha)
+			else
+				self.flash = nil
+			end
 		end
 	elseif (self.fadeOut) then
 		local alpha = self:GetAlpha() - elapsed * 2			-- CASTING_BAR_ALPHA_STEP
