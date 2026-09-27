@@ -1,0 +1,81 @@
+From b8d1d15b09d4aab209398e5adf8add0303c0d709 Mon Sep 17 00:00:00 2001
+From: Hussain-maker <79055482+Hussain-maker@users.noreply.github.com>
+Date: Sun, 27 Sep 2026 11:02:17 +0100
+Subject: [PATCH] Cast bars: option to turn off the flash when a cast finishes
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../XPerlForever_ArcaneBar.lua                  | 13 +++++++++----
+ .../XPerlForever_FrameOptions.xml               | 17 +++++++++++++++++
+ XPerlForever_Options/localization.lua           |  2 ++
+ 3 files changed, 28 insertions(+), 4 deletions(-)
+
+diff --git a/XPerlForever_ArcaneBar/XPerlForever_ArcaneBar.lua b/XPerlForever_ArcaneBar/XPerlForever_ArcaneBar.lua
+index 96dbdf0..caa11be 100644
+--- a/XPerlForever_ArcaneBar/XPerlForever_ArcaneBar.lua
++++ b/XPerlForever_ArcaneBar/XPerlForever_ArcaneBar.lua
+@@ -561,11 +561,16 @@ function XPerl_ArcaneBar_OnUpdate(self, elapsed)
+ 	elseif (getTime < self.holdTime) then
+ 		return
+ 	elseif (self.flash) then
+-		local alpha = self.barFlash:GetAlpha() + elapsed * 3	-- CASTING_BAR_FLASH_STEP
+-		if (alpha < 1) then
+-			self.barFlash:SetAlpha(alpha)
+-		else
++		if (conf.castBarNoFlash) then
++			self.barFlash:Hide()
+ 			self.flash = nil
++		else
++			local alpha = self.barFlash:GetAlpha() + elapsed * 3	-- CASTING_BAR_FLASH_STEP
++			if (alpha < 1) then
++				self.barFlash:SetAlpha(alpha)
++			else
++				self.flash = nil
++			end
+ 		end
+ 	elseif (self.fadeOut) then
+ 		local alpha = self:GetAlpha() - elapsed * 2			-- CASTING_BAR_ALPHA_STEP
+diff --git a/XPerlForever_Options/XPerlForever_FrameOptions.xml b/XPerlForever_Options/XPerlForever_FrameOptions.xml
+index 56cb82e..978987a 100644
+--- a/XPerlForever_Options/XPerlForever_FrameOptions.xml
++++ b/XPerlForever_Options/XPerlForever_FrameOptions.xml
+@@ -4824,6 +4824,23 @@
+ 						</Scripts>
+ 					</CheckButton>
+ 
++					<CheckButton name="$parent_NoCastFlash" inherits="XPerlCheckButtonTemplate">
++						<Anchors>
++							<Anchor point="TOPLEFT" relativeTo="$parent_XPerlOldRoleIcons" relativePoint="BOTTOMLEFT">
++								<Offset>
++									<AbsDimension x="0" y="6"/>
++								</Offset>
++							</Anchor>
++						</Anchors>
++						<Scripts>
++							<OnLoad>
++								XPerl_OptionsSetMyText(self, "XPERL_CONF_NOCASTFLASH")
++								self.configBase = "XPerlDB"
++								self.configIndex = "castBarNoFlash"
++							</OnLoad>
++						</Scripts>
++					</CheckButton>
++
+ 					<CheckButton name="$parent_SettingsMethod" inherits="XPerlCheckButtonTemplate">
+ 						<Anchors>
+ 							<Anchor point="TOPLEFT" relativePoint="BOTTOMRIGHT">
+diff --git a/XPerlForever_Options/localization.lua b/XPerlForever_Options/localization.lua
+index 4c6884d..2598adb 100644
+--- a/XPerlForever_Options/localization.lua
++++ b/XPerlForever_Options/localization.lua
+@@ -205,6 +205,8 @@ XPERL_CONF_SHOWREADYCHECK				= "Show Ready Check"
+ XPERL_CONF_SHOWREADYCHECK_DESC			= "Enable display of ready/not-ready icons on unit frames."
+ XPERL_CONF_XPERLOLDROLEICONS			= "Old group role icons"
+ XPERL_CONF_XPERLOLDROLEICONS_DESC		= "Show the original X-Perl group role icons."
++XPERL_CONF_NOCASTFLASH				= "No Cast Bar Flash"
++XPERL_CONF_NOCASTFLASH_DESC			= "Don't flash X-Perl's cast bars when a cast finishes (all frames)."
+ XPERL_CONF_BUFFTOOLTIPS					= "Buff Tooltips"
+ XPERL_CONF_BUFFTOOLTIPS_DESC			= "Enable tooltips for buffs and debuffs."
+ XPERL_CONF_UNITTOOLTIPS					= "Unit Tooltips"
+-- 
+2.48.1.windows.1
+

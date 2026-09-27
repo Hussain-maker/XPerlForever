@@ -154,6 +154,25 @@ class also when it is secret (via the arena opponent's spec); the class icon use
 The "Class Portrait" option errored ("attempt to call a nil value"). New `XPerl_SetClassPortrait` draws the
 round class icon (`UI-Classes-Circles`); the normal portrait resets texture coordinates first.
 
+### 14. Cast bars: option "No Cast Bar Flash" (option, off by default)
+`XPerlForever_ArcaneBar`, options (xml + localization) – **+28 / −4**
+
+A finished cast fades in an additive glow that is larger than the bar, so it spills over the portrait and
+health bar. The new Global option skips that glow on every X-Perl cast bar; the green finish and fade stay.
+
+### 15. Cast bars: interrupt-ready colours, kicked channels, "Interrupted by" (fix + option)
+`XPerlForever_ArcaneBar`, options (xml + localization) – **+220 / −22**
+
+- New Global option **"Interrupt Colours"** (off by default): enemy target/focus casts turn red while the
+  player's interrupt is on cooldown and back to the normal colour when it's ready (like BetterBlizzFrames'
+  "Interrupt CD Color"). The interrupt is found from a list of interrupt spells (pets included) and
+  re-detected on spec/talent/pet changes. Cooldowns are secret in combat, so readiness comes from a hidden
+  Cooldown frame fed `C_Spell.GetSpellCooldownDuration` – the values are never read.
+- Bug fix: an interrupted **channel** arrives as `UNIT_SPELLCAST_CHANNEL_STOP` with an interrupter, which was
+  treated as a success (green). It now ends red like an interrupted cast, with a full bar.
+- Interrupted casts/channels show Blizzard's "Interrupted by <Name>" in class colour when the interrupter can
+  be read; otherwise "Interrupted" as before.
+
 ## Totals
 
 | Change | Files | Lines |
@@ -171,5 +190,7 @@ round class icon (`UI-Classes-Circles`); the normal portrait resets texture coor
 | 11. Less aura clutter | XPerlForever.lua, Target, TargetTarget, Options | +53 / −6 |
 | 12. Arena enemy portraits | XPerlForever.lua, Target | +42 / −13 |
 | 13. SetPortraitToTexture removed | XPerlForever.lua | +22 / −14 |
+| 14. No Cast Bar Flash option | ArcaneBar, Options | +28 / −4 |
+| 15. Interrupt colours, kicked channels, "Interrupted by" | ArcaneBar, Options | +220 / −22 |
 
 Thanks for keeping X-Perl alive!
