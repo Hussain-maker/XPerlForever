@@ -1831,14 +1831,22 @@ function XPerl_UnitClassFile(unit)
 	if (XPerl_CanAccess(class)) then
 		return class
 	end
+	local i = XPerl_ArenaOpponentIndex(unit)
+	if (i) then
+		local specID = GetArenaOpponentSpec and GetArenaOpponentSpec(i)
+		if (XPerl_CanAccess(specID) and specID and specID > 0) then
+			return (select(6, GetSpecializationInfoByID(specID)))
+		end
+	end
+end
+
+-- XPerl_ArenaOpponentIndex(unit)
+-- 1-5 if the unit is that arena opponent (UnitIsUnit with arenaN is not secret), else nil
+function XPerl_ArenaOpponentIndex(unit)
 	for i = 1, 5 do
 		local isOpponent = UnitIsUnit(unit, "arena"..i)
 		if (XPerl_CanAccess(isOpponent) and isOpponent) then
-			local specID = GetArenaOpponentSpec and GetArenaOpponentSpec(i)
-			if (XPerl_CanAccess(specID) and specID and specID > 0) then
-				return (select(6, GetSpecializationInfoByID(specID)))
-			end
-			return
+			return i
 		end
 	end
 end
@@ -2391,11 +2399,12 @@ end
 -- XPerl_SetUnitNameColor
 function XPerl_SetUnitNameColor(self, unit)
 	local color
-	if (XPerl_SafeBool(UnitIsPlayer(unit), false) or not XPerl_SafeBool(UnitIsVisible(unit), true)) then -- Changed UnitPlayerControlled to UnitIsPlayer for 2.3.5
+	-- Z-Perl Forever: in arena an enemy's player flag and class can be secret; arena opponents
+	-- are players and XPerl_UnitClassFile takes their class from their spec
+	if (XPerl_SafeBool(UnitIsPlayer(unit), false) or XPerl_ArenaOpponentIndex(unit) or not XPerl_SafeBool(UnitIsVisible(unit), true)) then -- Changed UnitPlayerControlled to UnitIsPlayer for 2.3.5
 		-- 1.8.3 - Changed to override pvp name colours
 		if (conf.colour.class) then
-			local _, class = UnitClass(unit)
-			color = XPerl_GetClassColour(class)
+			color = XPerl_GetClassColour(XPerl_UnitClassFile(unit))
 		else
 			color = XPerl_ReactionColour(unit)
 		end

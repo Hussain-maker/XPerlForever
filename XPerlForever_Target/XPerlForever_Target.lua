@@ -683,7 +683,7 @@ local function XPerl_Target_UpdatePVP(self)
 		local c = XPerl_ReactionColour(partyid)
 		self.nameFrame:SetBackdropColor(c.r, c.g, c.b)
 
-		if (conf.colour.class and UnitPlayerControlled(partyid)) then
+		if (conf.colour.class and XPerl_SafeBool(UnitPlayerControlled(partyid), false)) then
 			XPerl_SetUnitNameColor(self.nameFrame.text, partyid)
 		else
 			self.nameFrame.text:SetTextColor(1, 1, 1, conf.transparency.text)
