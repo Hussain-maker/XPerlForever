@@ -1818,6 +1818,27 @@ function XPerl_ClassPos(unitClass)
 	return 0.25, 0.5, 0.5, 0.75
 end
 
+-- XPerl_UnitClassFile(unit)
+-- The unit's class file name ("DRUID"), also when UnitClassBase is secret
+-- (enemies in arena): the arena opponent's spec is not secret, so it is used
+-- when the unit is one of them. Returns nil if the class can't be known.
+function XPerl_UnitClassFile(unit)
+	local class = UnitClassBase(unit)
+	if (XPerl_CanAccess(class)) then
+		return class
+	end
+	for i = 1, 5 do
+		local isOpponent = UnitIsUnit(unit, "arena"..i)
+		if (XPerl_CanAccess(isOpponent) and isOpponent) then
+			local specID = GetArenaOpponentSpec and GetArenaOpponentSpec(i)
+			if (XPerl_CanAccess(specID) and specID and specID > 0) then
+				return (select(6, GetSpecializationInfoByID(specID)))
+			end
+			return
+		end
+	end
+end
+
 -- XPerl_Toggle
 function XPerl_Toggle()
 	if (XPerlLocked == 1) then
@@ -4181,6 +4202,25 @@ end
 -- XPerl_Unit_UpdatePortrait
 function XPerl_Unit_UpdatePortrait(self, force)
 	if (self.conf and self.conf.portrait) then
+		-- Arena enemies: their 3D model doesn't load for addons, so use the 2D
+		-- portrait, or their class icon if the game doesn't provide that either
+		local _, instanceType = IsInInstance()
+		if (instanceType == "arena" and XPerl_SafeBool(UnitCanAttack("player", self.partyid), false)) then
+			local portrait = self.portraitFrame.portrait
+			self.portraitFrame.portrait3D:Hide()
+			self.portraitFrame.portrait3D.guid = nil
+			portrait:SetTexture(nil)
+			SetPortraitTexture(portrait, self.partyid)
+			local texture = portrait:GetTexture()
+			if (not (XPerl_CanAccess(texture) and texture)) then
+				local class = XPerl_UnitClassFile(self.partyid)
+				if (class) then
+					SetPortraitToTexture(portrait, "Interface\\Icons\\ClassIcon_"..class)
+				end
+			end
+			portrait:Show()
+			return
+		end
 		if self.conf.classPortrait then
 			local _, englishClass = UnitClass(self.partyid)
 			if UnitIsPlayer(self.partyid) and englishClass then

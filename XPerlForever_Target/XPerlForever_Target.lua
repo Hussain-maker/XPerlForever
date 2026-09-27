@@ -1016,19 +1016,8 @@ local function XPerl_Target_UpdateType(self)
 				if (UnitIsPlayer(partyid) or not UnitPlayerControlled(partyid)) then
 					local tex = self.typeFramePlayer.classTexture
 					if (not XPerl_CanAccess(LocalClass)) then
-						-- Class hidden (enemies in arena): the arena opponent's spec is not,
-						-- so take the class from it when this unit is one of them
-						for i = 1, 5 do
-							local isOpponent = UnitIsUnit(partyid, "arena"..i)
-							if (XPerl_CanAccess(isOpponent) and isOpponent) then
-								local specID = GetArenaOpponentSpec and GetArenaOpponentSpec(i)
-								local specClass = XPerl_CanAccess(specID) and specID > 0 and select(6, GetSpecializationInfoByID(specID))
-								if (specClass) then
-									LocalClass = specClass
-								end
-								break
-							end
-						end
+						-- Class hidden (enemies in arena): take it from the arena opponent's spec
+						LocalClass = XPerl_UnitClassFile(partyid) or LocalClass
 					end
 					if (XPerl_CanAccess(LocalClass)) then
 						tex:SetTexture("Interface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes")
