@@ -1,0 +1,63 @@
+From e279129d2d13b2cd2afcf8c573594a27250f6f75 Mon Sep 17 00:00:00 2001
+From: Hussain-maker <79055482+Hussain-maker@users.noreply.github.com>
+Date: Sat, 26 Sep 2026 23:41:17 +0100
+Subject: [PATCH] Target/focus: correct class icon when the unit's class is
+ hidden (arena)
+
+When UnitClassBase returns a secret class, XPerl_ClassPos fell back to fixed
+coordinates that are the Death Knight square on the class sheet, so every
+arena enemy showed as a Death Knight. Now the class is taken from the arena
+opponent's spec (GetArenaOpponentSpec, which is not secret) when the unit is
+one of the arena opponents, keeping X-Perl's normal class icon. Otherwise the
+game resolves the icon from the secret class (GetClassAtlas), and if neither
+works the icon is hidden instead of showing a wrong class.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ XPerlForever_Target/XPerlForever_Target.lua | 30 ++++++++++++++++++---
+ 1 file changed, 27 insertions(+), 3 deletions(-)
+
+diff --git a/XPerlForever_Target/XPerlForever_Target.lua b/XPerlForever_Target/XPerlForever_Target.lua
+index 6aee5d3..d460e01 100644
+--- a/XPerlForever_Target/XPerlForever_Target.lua
++++ b/XPerlForever_Target/XPerlForever_Target.lua
+@@ -1011,9 +1011,33 @@ local function XPerl_Target_UpdateType(self)
+ 				XPerl_SafeSetWidthFromText(self.bossFrame, self.bossFrame.text, 10, 70)
+ 			else
+ 				if (UnitIsPlayer(partyid) or not UnitPlayerControlled(partyid)) then
+-					local l, r, t, b = XPerl_ClassPos(LocalClass)
+-					self.typeFramePlayer.classTexture:SetTexCoord(l, r, t, b)
+-					self.typeFramePlayer:Show()
++					local tex = self.typeFramePlayer.classTexture
++					if (not XPerl_CanAccess(LocalClass)) then
++						-- Class hidden (enemies in arena): the arena opponent's spec is not,
++						-- so take the class from it when this unit is one of them
++						for i = 1, 5 do
++							local isOpponent = UnitIsUnit(partyid, "arena"..i)
++							if (XPerl_CanAccess(isOpponent) and isOpponent) then
++								local specID = GetArenaOpponentSpec and GetArenaOpponentSpec(i)
++								local specClass = XPerl_CanAccess(specID) and specID > 0 and select(6, GetSpecializationInfoByID(specID))
++								if (specClass) then
++									LocalClass = specClass
++								end
++								break
++							end
++						end
++					end
++					if (XPerl_CanAccess(LocalClass)) then
++						tex:SetTexture("Interface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes")
++						tex:SetTexCoord(XPerl_ClassPos(LocalClass))
++						self.typeFramePlayer:Show()
++					elseif (GetClassAtlas and pcall(tex.SetAtlas, tex, GetClassAtlas(LocalClass))) then
++						-- Class hidden (enemies in arena): the game resolves the icon itself
++						self.typeFramePlayer:Show()
++					else
++						-- Unknown class: no icon rather than a wrong one
++						self.typeFramePlayer:Hide()
++					end
+ 				end
+ 			end
+ 		end
+-- 
+2.48.1.windows.1
+

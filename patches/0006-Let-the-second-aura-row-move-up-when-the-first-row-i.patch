@@ -1,0 +1,55 @@
+From 212d3d6bef7cd70a0c66c7245803a47355355047 Mon Sep 17 00:00:00 2001
+From: Hussain-maker <79055482+Hussain-maker@users.noreply.github.com>
+Date: Sat, 26 Sep 2026 22:18:21 +0100
+Subject: [PATCH] Let the second aura row move up when the first row is empty
+
+With no buffs (or, on enemies, no debuffs) the first aura row stayed
+reserved, so the other row started one row lower. The normal layout now
+starts the second row at the top when the first row has nothing shown, and
+the AuraContainer layout used while auras are restricted anchors the second
+group below the first group's icons instead of to a fixed lower half.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ XPerlForever/XPerlForever.lua               | 4 ++++
+ XPerlForever_Target/XPerlForever_Target.lua | 8 ++++++--
+ 2 files changed, 10 insertions(+), 2 deletions(-)
+
+diff --git a/XPerlForever/XPerlForever.lua b/XPerlForever/XPerlForever.lua
+index 5a80a51..938b11a 100644
+--- a/XPerlForever/XPerlForever.lua
++++ b/XPerlForever/XPerlForever.lua
+@@ -3567,6 +3567,10 @@ function XPerl_Unit_BuffPositions(self, buffList1, buffList2, size1, size2)
+ 		if (buffList1) then
+ 			XPerl_Unit_BuffPositionsType(self, buffList1, true, size1)
+ 		end
++		-- An empty first row takes no space: the second row starts at the top
++		if (not (buffList1 and buffList1[1] and buffList1[1]:IsShown())) then
++			self.prevBuff = nil
++		end
+ 		if (buffList2) then
+ 			XPerl_Unit_BuffPositionsType(self, buffList2, false, size2)
+ 		end
+diff --git a/XPerlForever_Target/XPerlForever_Target.lua b/XPerlForever_Target/XPerlForever_Target.lua
+index e51dd91..d66ce56 100644
+--- a/XPerlForever_Target/XPerlForever_Target.lua
++++ b/XPerlForever_Target/XPerlForever_Target.lua
+@@ -449,9 +449,13 @@ local function XPerl_Target_AuraContainer_Setup(self)
+ 	firstHalf:ClearAllPoints()
+ 	firstHalf:SetPoint("TOPLEFT", self.buffFrame, "TOPLEFT", 0, 0)
+ 	firstHalf:SetPoint("BOTTOMRIGHT", self.buffFrame, "RIGHT", 0, 0)
++	-- The second group starts right below the first group's icons, so it moves
++	-- up into the first row when the first group is empty
++	local firstContainer = buffsFirst and buffContainer or debuffContainer
+ 	secondHalf:ClearAllPoints()
+-	secondHalf:SetPoint("TOPLEFT", self.buffFrame, "LEFT", 0, 0)
+-	secondHalf:SetPoint("BOTTOMRIGHT", self.buffFrame, "BOTTOMRIGHT", 0, 0)
++	secondHalf:SetPoint("TOPLEFT", firstContainer, "BOTTOMLEFT", 0, -1)
++	secondHalf:SetPoint("RIGHT", self.buffFrame, "RIGHT", 0, 0)
++	secondHalf:SetHeight(1)
+ 
+ 	self.buffContainer, self.debuffContainer = buffContainer, debuffContainer
+ end
+-- 
+2.48.1.windows.1
+

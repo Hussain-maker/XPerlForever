@@ -1,0 +1,35 @@
+From c408fdb574bc84ba50806eb284678e543e548f71 Mon Sep 17 00:00:00 2001
+From: Hussain-maker <79055482+Hussain-maker@users.noreply.github.com>
+Date: Sat, 26 Sep 2026 23:43:46 +0100
+Subject: [PATCH] Player: don't compare a missing power type in the druid mana
+ bar update
+
+XPerl_Player_DruidBarUpdate compared UnitPowerType(self.partyid) with 0
+directly. It can return nothing (seen while options are applied, before the
+frame has its unit), raising "attempt to compare number with nil". Only
+compare a readable value; otherwise the extra mana bar stays hidden until
+the next update.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ XPerlForever_Player/XPerlForever_Player.lua | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/XPerlForever_Player/XPerlForever_Player.lua b/XPerlForever_Player/XPerlForever_Player.lua
+index cc6dcae..49db75f 100644
+--- a/XPerlForever_Player/XPerlForever_Player.lua
++++ b/XPerlForever_Player/XPerlForever_Player.lua
+@@ -622,7 +622,9 @@ function XPerl_Player_DruidBarUpdate(self)
+ 	end
+ 
+ 	--local druidBarExtra
+-	if ((playerClass == "DRUID" or playerClass == "PRIEST") and UnitPowerType(self.partyid) > 0) then -- Shaman's UnitPowerType is buggy
++	-- UnitPowerType can return nothing (e.g. while options are applied before the frame has its unit)
++	local powerType = self.partyid and UnitPowerType(self.partyid)
++	if ((playerClass == "DRUID" or playerClass == "PRIEST") and XPerl_CanAccess(powerType) and powerType > 0) then -- Shaman's UnitPowerType is buggy
+ 		if (pconf.values) then
+ 			druidBar.text:Show()
+ 		else
+-- 
+2.48.1.windows.1
+

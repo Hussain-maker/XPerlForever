@@ -1,7 +1,7 @@
 From 397470e15efddb4572458e81a58ba2b7b9cc3b7c Mon Sep 17 00:00:00 2001
 From: Hussain-maker <79055482+Hussain-maker@users.noreply.github.com>
 Date: Sat, 26 Sep 2026 18:50:01 +0100
-Subject: [PATCH 3/4] Options: let optional modules add a tab
+Subject: [PATCH] Options: let optional modules add a tab
 
 A module can append {key, title, create} to XPerl_OptionsExtraTabs. On the
 first show of the options window each entry gets a tab after the last

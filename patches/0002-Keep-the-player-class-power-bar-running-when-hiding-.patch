@@ -1,7 +1,7 @@
 From d05b1af7a1b1532b52ab7a0a81a31a6ca6bd4738 Mon Sep 17 00:00:00 2001
 From: Hussain-maker <79055482+Hussain-maker@users.noreply.github.com>
 Date: Sat, 26 Sep 2026 18:39:27 +0100
-Subject: [PATCH 2/4] Keep the player class power bar running when hiding the
+Subject: [PATCH] Keep the player class power bar running when hiding the
  Blizzard player frame
 
 On retail (Midnight) the Blizzard player frame's class power bar also drives

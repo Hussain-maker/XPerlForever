@@ -1,0 +1,166 @@
+From ecddcdf24c09f4bbf46b978dc57c906b94ef1284 Mon Sep 17 00:00:00 2001
+From: Hussain-maker <79055482+Hussain-maker@users.noreply.github.com>
+Date: Sun, 27 Sep 2026 09:34:59 +0100
+Subject: [PATCH] Less aura clutter: key enemy buffs everywhere, CC-only focus,
+ ToT rows
+
+- "Key Enemy Buffs" (target/focus) now also applies in the normal layout,
+  using C_UnitAuras.IsAuraFilteredOutByInstanceID with the IMPORTANT and
+  DISPELLABLE filters; unreadable answers keep the buff shown.
+- New focus option "CC Debuffs Only" (off by default): the focus shows only
+  crowd control debuffs (HARMFUL|CROWD_CONTROL) from anyone, in both the
+  normal and the restricted-aura layout.
+- Target-of-target / focus-target restricted-aura layout wraps at the frame's
+  full width and honours the row limit, like target/focus.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ XPerlForever/XPerlForever.lua                 | 17 ++++++++++++++---
+ .../XPerlForever_FrameOptions.xml             | 18 ++++++++++++++++++
+ XPerlForever_Options/localization.lua         |  2 ++
+ XPerlForever_Target/XPerlForever_Target.lua   |  3 +++
+ .../XPerlForever_TargetTarget.lua             | 19 ++++++++++++++++---
+ 5 files changed, 53 insertions(+), 6 deletions(-)
+
+diff --git a/XPerlForever/XPerlForever.lua b/XPerlForever/XPerlForever.lua
+index ef51d1a..ccb7977 100644
+--- a/XPerlForever/XPerlForever.lua
++++ b/XPerlForever/XPerlForever.lua
+@@ -3709,6 +3709,8 @@ function XPerl_Unit_UpdateBuffs(self, maxBuffs, maxDebuffs, castableOnly, curabl
+ 		local canAttack = UnitCanAttack("player", partyid)
+ 		canAttack = XPerl_CanAccess(canAttack) and canAttack
+ 		local isFriendly = not canAttack
++		-- "Key Enemy Buffs" (target/focus): on enemies keep only important or dispellable buffs
++		local isFilteredOut = canAttack and self.conf.buffs.keyOnly and C_UnitAuras and C_UnitAuras.IsAuraFilteredOutByInstanceID
+ 
+ 		if (self.conf.buffs.enable and maxBuffs and maxBuffs > 0) then
+ 			local buffIconIndex = 1
+@@ -3760,7 +3762,14 @@ function XPerl_Unit_UpdateBuffs(self, maxBuffs, maxDebuffs, castableOnly, curabl
+ 
+ 					-- Z-Perl Forever: optional hook XPerl_BuffFilter(frame, unit, spellID, auraInstanceID, isPlayer),
+ 					-- called for buffs that would be shown; return true to hide the buff (no gap, not counted).
+-					if (icon and (((mine == 1) and (isPlayer or stealable)) or ((mine == 2) and not (isPlayer or stealable))) and not (XPerl_BuffFilter and XPerl_BuffFilter(self, partyid, spellID, auraInstanceID, isPlayer))) then
++					local notKey
++					if (isFilteredOut and auraInstanceID and XPerl_CanAccess(auraInstanceID)) then
++						local notImportant = isFilteredOut(partyid, auraInstanceID, "HELPFUL|IMPORTANT")
++						local notDispellable = isFilteredOut(partyid, auraInstanceID, "HELPFUL|DISPELLABLE")
++						notKey = XPerl_CanAccess(notImportant) and XPerl_CanAccess(notDispellable) and notImportant and notDispellable
++					end
++
++					if (icon and not notKey and (((mine == 1) and (isPlayer or stealable)) or ((mine == 2) and not (isPlayer or stealable))) and not (XPerl_BuffFilter and XPerl_BuffFilter(self, partyid, spellID, auraInstanceID, isPlayer))) then
+ 						local button = XPerl_GetBuffButton(self, buffIconIndex, 0, true, buffnum)
+ 						button.filter = filter
+ 						button:SetAlpha(1)
+@@ -3861,8 +3870,10 @@ function XPerl_Unit_UpdateBuffs(self, maxBuffs, maxDebuffs, castableOnly, curabl
+ 			self.debuffFrame:Show()
+ 			lastIcon = 0
+ 			local mineMap
++			-- "CC Debuffs Only" (focus): crowd control from anyone, so "only mine" doesn't apply
++			local ccOnly = self.conf.debuffs.ccOnly
+ 			for mine = 1, 2 do
+-				if (self.conf.debuffs.onlyMine and mine == 2) then
++				if (self.conf.debuffs.onlyMine and mine == 2 and not ccOnly) then
+ 					if (canAttack) then
+ 						break
+ 					end
+@@ -3871,7 +3882,7 @@ function XPerl_Unit_UpdateBuffs(self, maxBuffs, maxDebuffs, castableOnly, curabl
+ 				end
+ 
+ 				for buffnum = 1, maxDebuffs do
+-					local filter = (isFriendly and curableOnly == 1) and "HARMFUL|RAID" or "HARMFUL"
++					local filter = ccOnly and "HARMFUL|CROWD_CONTROL" or ((isFriendly and curableOnly == 1) and "HARMFUL|RAID" or "HARMFUL")
+ 					local name, icon, count, debuffType, duration, expirationTime, unitCaster, canStealOrPurge, nameplateShowPersonal, spellID, _, auraInstanceID, isMine = XPerl_UnitDebuff(partyid, buffnum, filter)
+ 
+ 					if (not name) then
+diff --git a/XPerlForever_Options/XPerlForever_FrameOptions.xml b/XPerlForever_Options/XPerlForever_FrameOptions.xml
+index 4e55369..56cb82e 100644
+--- a/XPerlForever_Options/XPerlForever_FrameOptions.xml
++++ b/XPerlForever_Options/XPerlForever_FrameOptions.xml
+@@ -10575,6 +10575,24 @@
+ 						</Scripts>
+ 					</CheckButton>
+ 
++					<CheckButton name="$parent_CCOnly" inherits="XPerlCheckButtonTemplate">
++						<Anchors>
++							<Anchor point="TOPLEFT" relativeTo="$parent_KeyBuffs" relativePoint="BOTTOMLEFT">
++								<Offset>
++									<AbsDimension x="0" y="6"/>
++								</Offset>
++							</Anchor>
++						</Anchors>
++						<Scripts>
++							<OnLoad>
++								XPerl_OptionsSetMyText(self, "XPERL_CONF_FOCUS_CCONLY")
++								self.configBase = "XPerlDB.focus.debuffs"
++								self.configIndex = "ccOnly"
++								self.configClick = XPerl_Target_Reset
++							</OnLoad>
++						</Scripts>
++					</CheckButton>
++
+ 					<CheckButton name="$parent_DebuffHighlight" inherits="XPerlCheckButtonTemplate">
+ 						<Anchors>
+ 							<Anchor point="TOPLEFT" relativeTo="$parent_Above" relativePoint="BOTTOMLEFT">
+diff --git a/XPerlForever_Options/localization.lua b/XPerlForever_Options/localization.lua
+index 388c653..4c6884d 100644
+--- a/XPerlForever_Options/localization.lua
++++ b/XPerlForever_Options/localization.lua
+@@ -566,6 +566,8 @@ XPERL_CONF_FOCUS_BUFFSFIRST			= "Buffs First"
+ XPERL_CONF_FOCUS_BUFFSFIRST_DESC		= "Always show Focus's buffs before its debuffs, also on enemies (by default enemies show debuffs first)."
+ XPERL_CONF_FOCUS_KEYBUFFS				= "Key Enemy Buffs"
+ XPERL_CONF_FOCUS_KEYBUFFS_DESC			= "In combat while aura details are hidden (arena, instances), show only important and purgeable buffs on enemies."
++XPERL_CONF_FOCUS_CCONLY				= "CC Debuffs Only"
++XPERL_CONF_FOCUS_CCONLY_DESC			= "Show only crowd control debuffs on the focus (stuns, fears, polymorphs, roots, silences...), from anyone."
+ XPERL_CONF_FOCUS_BIGBUFFS				= XPERL_CONF_TARGET_BIGBUFFS
+ XPERL_CONF_FOCUS_BIGBUFFS_DESC			= XPERL_CONF_TARGET_BIGBUFFS_DESC
+ XPERL_CONF_FOCUS_BIGDEBUFFS				= XPERL_CONF_TARGET_BIGDEBUFFS
+diff --git a/XPerlForever_Target/XPerlForever_Target.lua b/XPerlForever_Target/XPerlForever_Target.lua
+index d460e01..5eb35af 100644
+--- a/XPerlForever_Target/XPerlForever_Target.lua
++++ b/XPerlForever_Target/XPerlForever_Target.lua
+@@ -434,6 +434,9 @@ local function XPerl_Target_AuraContainer_Setup(self)
+ 	-- enemy debuffs, "curable" only for friendly debuffs. Blizzard applies them.
+ 	local buffFilter = "HELPFUL"..(self.conf.buffs.castable == 1 and "|RAID" or "")..((self.conf.buffs.onlyMine and not canAttack) and "|PLAYER" or "")
+ 	local debuffFilter = "HARMFUL"..((not canAttack and self.conf.debuffs.curable == 1) and "|RAID" or "")..((self.conf.debuffs.onlyMine and canAttack) and "|PLAYER" or "")
++	if (self.conf.debuffs.ccOnly) then
++		debuffFilter = "HARMFUL|CROWD_CONTROL"
++	end
+ 	-- XPerlDB.buffs.cooldown is a single global setting shared by buffs and
+ 	-- debuffs by design (its own options-panel description says so) -- there
+ 	-- is no XPerlDB.debuffs table. Do not split this into a per-type value.
+diff --git a/XPerlForever_TargetTarget/XPerlForever_TargetTarget.lua b/XPerlForever_TargetTarget/XPerlForever_TargetTarget.lua
+index e3bfa73..1c52933 100644
+--- a/XPerlForever_TargetTarget/XPerlForever_TargetTarget.lua
++++ b/XPerlForever_TargetTarget/XPerlForever_TargetTarget.lua
+@@ -248,12 +248,25 @@ local function XPerl_TargetTarget_AuraContainer_Setup(self)
+ 
+ 	local debuffsFirst = XPerl_SafeBool(UnitCanAttack("player", self.partyid), false)
+ 	local showSwipe = conf.buffs.cooldown and true or false
+-	local lineSize = self.conf.buffs.wrap and self.buffFrame:GetWidth() or 2000
++	-- Wrap at the frame's full width and cap the rows, like the normal layout
++	local lineSize = 2000
++	if (self.conf.buffs.wrap) then
++		lineSize = self.statsFrame:GetWidth()
++		if (self.levelFrame and self.levelFrame:IsShown()) then
++			lineSize = lineSize - 2 + self.levelFrame:GetWidth()
++		end
++	end
++	local rows = self.conf.buffs.rows
++	local function MaxIcons(size)
++		if (self.conf.buffs.wrap and rows and rows > 0) then
++			return min(40, max(1, floor((lineSize + 1) / (size + 1))) * rows)
++		end
++	end
+ 
+ 	local buffContainer, buffHalf = XPerl_AuraContainer_Create(self, "buffHalfFrame",
+-		self:GetName().."AuraBuffs", "buffs", "HELPFUL", self.conf.buffs.size, lineSize, showSwipe)
++		self:GetName().."AuraBuffs", "buffs", "HELPFUL", self.conf.buffs.size, lineSize, showSwipe, MaxIcons(self.conf.buffs.size))
+ 	local debuffContainer, debuffHalf = XPerl_AuraContainer_Create(self, "debuffHalfFrame",
+-		self:GetName().."AuraDebuffs", "debuffs", "HARMFUL", self.conf.debuffs.size, lineSize, showSwipe)
++		self:GetName().."AuraDebuffs", "debuffs", "HARMFUL", self.conf.debuffs.size, lineSize, showSwipe, MaxIcons(self.conf.debuffs.size))
+ 
+ 	local firstHalf, secondHalf = buffHalf, debuffHalf
+ 	if (debuffsFirst) then
+-- 
+2.48.1.windows.1
+

@@ -1,0 +1,104 @@
+From 5da0b144aa1f4a35fdbfdda8940e80bda564d5c2 Mon Sep 17 00:00:00 2001
+From: Hussain-maker <79055482+Hussain-maker@users.noreply.github.com>
+Date: Sun, 27 Sep 2026 09:46:08 +0100
+Subject: [PATCH] Portraits: 2D portrait (or class icon) for arena enemies
+
+The 3D portrait model stays empty for enemy units in arena, so their
+portraits were blank. For arena enemies XPerl_Unit_UpdatePortrait now uses
+the 2D portrait, falling back to the class icon when that isn't available.
+New helper XPerl_UnitClassFile(unit) returns the class also when it is
+secret, via the arena opponent's spec; the target class icon uses it too.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ XPerlForever/XPerlForever.lua               | 40 +++++++++++++++++++++
+ XPerlForever_Target/XPerlForever_Target.lua | 15 ++------
+ 2 files changed, 42 insertions(+), 13 deletions(-)
+
+diff --git a/XPerlForever/XPerlForever.lua b/XPerlForever/XPerlForever.lua
+index ccb7977..d2fe83b 100644
+--- a/XPerlForever/XPerlForever.lua
++++ b/XPerlForever/XPerlForever.lua
+@@ -1818,6 +1818,27 @@ function XPerl_ClassPos(unitClass)
+ 	return 0.25, 0.5, 0.5, 0.75
+ end
+ 
++-- XPerl_UnitClassFile(unit)
++-- The unit's class file name ("DRUID"), also when UnitClassBase is secret
++-- (enemies in arena): the arena opponent's spec is not secret, so it is used
++-- when the unit is one of them. Returns nil if the class can't be known.
++function XPerl_UnitClassFile(unit)
++	local class = UnitClassBase(unit)
++	if (XPerl_CanAccess(class)) then
++		return class
++	end
++	for i = 1, 5 do
++		local isOpponent = UnitIsUnit(unit, "arena"..i)
++		if (XPerl_CanAccess(isOpponent) and isOpponent) then
++			local specID = GetArenaOpponentSpec and GetArenaOpponentSpec(i)
++			if (XPerl_CanAccess(specID) and specID and specID > 0) then
++				return (select(6, GetSpecializationInfoByID(specID)))
++			end
++			return
++		end
++	end
++end
++
+ -- XPerl_Toggle
+ function XPerl_Toggle()
+ 	if (XPerlLocked == 1) then
+@@ -4181,6 +4202,25 @@ end
+ -- XPerl_Unit_UpdatePortrait
+ function XPerl_Unit_UpdatePortrait(self, force)
+ 	if (self.conf and self.conf.portrait) then
++		-- Arena enemies: their 3D model doesn't load for addons, so use the 2D
++		-- portrait, or their class icon if the game doesn't provide that either
++		local _, instanceType = IsInInstance()
++		if (instanceType == "arena" and XPerl_SafeBool(UnitCanAttack("player", self.partyid), false)) then
++			local portrait = self.portraitFrame.portrait
++			self.portraitFrame.portrait3D:Hide()
++			self.portraitFrame.portrait3D.guid = nil
++			portrait:SetTexture(nil)
++			SetPortraitTexture(portrait, self.partyid)
++			local texture = portrait:GetTexture()
++			if (not (XPerl_CanAccess(texture) and texture)) then
++				local class = XPerl_UnitClassFile(self.partyid)
++				if (class) then
++					SetPortraitToTexture(portrait, "Interface\\Icons\\ClassIcon_"..class)
++				end
++			end
++			portrait:Show()
++			return
++		end
+ 		if self.conf.classPortrait then
+ 			local _, englishClass = UnitClass(self.partyid)
+ 			if UnitIsPlayer(self.partyid) and englishClass then
+diff --git a/XPerlForever_Target/XPerlForever_Target.lua b/XPerlForever_Target/XPerlForever_Target.lua
+index 5eb35af..6093e1a 100644
+--- a/XPerlForever_Target/XPerlForever_Target.lua
++++ b/XPerlForever_Target/XPerlForever_Target.lua
+@@ -1016,19 +1016,8 @@ local function XPerl_Target_UpdateType(self)
+ 				if (UnitIsPlayer(partyid) or not UnitPlayerControlled(partyid)) then
+ 					local tex = self.typeFramePlayer.classTexture
+ 					if (not XPerl_CanAccess(LocalClass)) then
+-						-- Class hidden (enemies in arena): the arena opponent's spec is not,
+-						-- so take the class from it when this unit is one of them
+-						for i = 1, 5 do
+-							local isOpponent = UnitIsUnit(partyid, "arena"..i)
+-							if (XPerl_CanAccess(isOpponent) and isOpponent) then
+-								local specID = GetArenaOpponentSpec and GetArenaOpponentSpec(i)
+-								local specClass = XPerl_CanAccess(specID) and specID > 0 and select(6, GetSpecializationInfoByID(specID))
+-								if (specClass) then
+-									LocalClass = specClass
+-								end
+-								break
+-							end
+-						end
++						-- Class hidden (enemies in arena): take it from the arena opponent's spec
++						LocalClass = XPerl_UnitClassFile(partyid) or LocalClass
+ 					end
+ 					if (XPerl_CanAccess(LocalClass)) then
+ 						tex:SetTexture("Interface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes")
+-- 
+2.48.1.windows.1
+

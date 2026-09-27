@@ -1,0 +1,121 @@
+From 5b8f125b974e3f2e16ad435b8b27a73b04c0722f Mon Sep 17 00:00:00 2001
+From: Hussain-maker <79055482+Hussain-maker@users.noreply.github.com>
+Date: Sat, 26 Sep 2026 22:10:11 +0100
+Subject: [PATCH] Target/focus: option to show buffs before debuffs on enemies
+
+Enemies always show debuffs in the first row and buffs after them. Add a
+"Buffs First" option (off by default, so nothing changes unless it is
+ticked) on the Target and Focus options pages that keeps buffs first for
+every unit. It applies to the normal layout and to the AuraContainer layout
+used while auras are restricted.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../XPerlForever_FrameOptions.xml             | 38 +++++++++++++++++++
+ XPerlForever_Options/localization.lua         |  4 ++
+ XPerlForever_Target/XPerlForever_Target.lua   |  4 +-
+ 3 files changed, 44 insertions(+), 2 deletions(-)
+
+diff --git a/XPerlForever_Options/XPerlForever_FrameOptions.xml b/XPerlForever_Options/XPerlForever_FrameOptions.xml
+index feeab3a..b8a71bd 100644
+--- a/XPerlForever_Options/XPerlForever_FrameOptions.xml
++++ b/XPerlForever_Options/XPerlForever_FrameOptions.xml
+@@ -8940,6 +8940,25 @@
+ 						</Scripts>
+ 					</CheckButton>
+ 
++					<CheckButton name="$parent_BuffsFirst" inherits="XPerlCheckButtonTemplate">
++						<Anchors>
++							<Anchor point="LEFT" relativeTo="$parent_Above" relativePoint="RIGHT">
++								<Offset>
++									<AbsDimension x="80" y="0"/>
++								</Offset>
++							</Anchor>
++						</Anchors>
++						<Scripts>
++							<OnLoad>
++								XPerl_OptionsSetMyText(self, "XPERL_CONF_TARGET_BUFFSFIRST")
++								self.flashFrame = {XPerl_TargetbuffFrame, XPerl_TargetdebuffFrame}
++								self.configBase = "XPerlDB.target.buffs"
++								self.configIndex = "first"
++								self.configClick = XPerl_Target_Reset
++							</OnLoad>
++						</Scripts>
++					</CheckButton>
++
+ 					<CheckButton name="$parent_DebuffHighlight" inherits="XPerlCheckButtonTemplate">
+ 						<Anchors>
+ 							<Anchor point="TOPLEFT" relativeTo="$parent_Above" relativePoint="BOTTOMLEFT">
+@@ -10501,6 +10520,25 @@
+ 						</Scripts>
+ 					</CheckButton>
+ 
++					<CheckButton name="$parent_BuffsFirst" inherits="XPerlCheckButtonTemplate">
++						<Anchors>
++							<Anchor point="LEFT" relativeTo="$parent_Above" relativePoint="RIGHT">
++								<Offset>
++									<AbsDimension x="80" y="0"/>
++								</Offset>
++							</Anchor>
++						</Anchors>
++						<Scripts>
++							<OnLoad>
++								XPerl_OptionsSetMyText(self, "XPERL_CONF_FOCUS_BUFFSFIRST")
++								self.flashFrame = {XPerl_FocusbuffFrame, XPerl_FocusdebuffFrame}
++								self.configBase = "XPerlDB.focus.buffs"
++								self.configIndex = "first"
++								self.configClick = XPerl_Target_Reset
++							</OnLoad>
++						</Scripts>
++					</CheckButton>
++
+ 					<CheckButton name="$parent_DebuffHighlight" inherits="XPerlCheckButtonTemplate">
+ 						<Anchors>
+ 							<Anchor point="TOPLEFT" relativeTo="$parent_Above" relativePoint="BOTTOMLEFT">
+diff --git a/XPerlForever_Options/localization.lua b/XPerlForever_Options/localization.lua
+index 933c830..3713daf 100644
+--- a/XPerlForever_Options/localization.lua
++++ b/XPerlForever_Options/localization.lua
+@@ -349,6 +349,8 @@ XPERL_CONF_TARGET_DEBUFFS_ENABLE		= "Enable Debuffs"
+ XPERL_CONF_TARGET_DEBUFFS_ENABLE_DESC	= "Enable debuffs on target frame."
+ XPERL_CONF_TARGET_BUFFSABOVE			= "Buffs Above"
+ XPERL_CONF_TARGET_BUFFSABOVE_DESC		= "Display Target's buffs above the frame instead of below."
++XPERL_CONF_TARGET_BUFFSFIRST			= "Buffs First"
++XPERL_CONF_TARGET_BUFFSFIRST_DESC		= "Always show Target's buffs before its debuffs, also on enemies (by default enemies show debuffs first)."
+ XPERL_CONF_TARGET_BIGSTEALABLE			= "Big Stealable Buffs"
+ XPERL_CONF_TARGET_BIGSTEALABLE_DESC		= "Show stealable buffs on enable targets first and larger than the others."
+ XPERL_CONF_TARGET_BIGBUFFS				= "Big Buffs"
+@@ -558,6 +560,8 @@ XPERL_CONF_FOCUS_DEBUFFS_ENABLE			= "Enable Debuffs"
+ XPERL_CONF_FOCUS_DEBUFFS_ENABLE_DESC	= "Enable debuffs on target frame."
+ XPERL_CONF_FOCUS_BUFFSABOVE				= "Buffs Above"
+ XPERL_CONF_FOCUS_BUFFSABOVE_DESC		= "Display Focus's buffs above the frame instead of below."
++XPERL_CONF_FOCUS_BUFFSFIRST			= "Buffs First"
++XPERL_CONF_FOCUS_BUFFSFIRST_DESC		= "Always show Focus's buffs before its debuffs, also on enemies (by default enemies show debuffs first)."
+ XPERL_CONF_FOCUS_BIGBUFFS				= XPERL_CONF_TARGET_BIGBUFFS
+ XPERL_CONF_FOCUS_BIGBUFFS_DESC			= XPERL_CONF_TARGET_BIGBUFFS_DESC
+ XPERL_CONF_FOCUS_BIGDEBUFFS				= XPERL_CONF_TARGET_BIGDEBUFFS
+diff --git a/XPerlForever_Target/XPerlForever_Target.lua b/XPerlForever_Target/XPerlForever_Target.lua
+index 78dd024..e51dd91 100644
+--- a/XPerlForever_Target/XPerlForever_Target.lua
++++ b/XPerlForever_Target/XPerlForever_Target.lua
+@@ -412,7 +412,7 @@ local function XPerl_Target_BuffPositions(self)
+ 	-- (pattern 12); ported here too, since self.partyid ("target"/"focus") is
+ 	-- a direct unit whose identity -- and so this call -- can still be secret
+ 	-- inside an instance (section 3).
+-	if (self.partyid and XPerl_SafeBool(UnitCanAttack("player", self.partyid), false)) then
++	if (self.partyid and not self.conf.buffs.first and XPerl_SafeBool(UnitCanAttack("player", self.partyid), false)) then
+ 		XPerl_Unit_BuffPositions(self, self.buffFrame.debuff, self.buffFrame.buff, self.conf.debuffs.size, self.conf.buffs.size)
+ 	else
+ 		XPerl_Unit_BuffPositions(self, self.buffFrame.buff, self.buffFrame.debuff, self.conf.buffs.size, self.conf.debuffs.size)
+@@ -428,7 +428,7 @@ local function XPerl_Target_AuraContainer_Setup(self)
+ 		return
+ 	end
+ 
+-	local buffsFirst = not XPerl_SafeBool(UnitCanAttack("player", self.partyid), false)
++	local buffsFirst = self.conf.buffs.first or not XPerl_SafeBool(UnitCanAttack("player", self.partyid), false)
+ 	-- XPerlDB.buffs.cooldown is a single global setting shared by buffs and
+ 	-- debuffs by design (its own options-panel description says so) -- there
+ 	-- is no XPerlDB.debuffs table. Do not split this into a per-type value.
+-- 
+2.48.1.windows.1
+

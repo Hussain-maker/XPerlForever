@@ -1,7 +1,7 @@
 From ddc72d5e0ea8ca692982d4c074c3d805d7e3e6d3 Mon Sep 17 00:00:00 2001
 From: Hussain-maker <79055482+Hussain-maker@users.noreply.github.com>
 Date: Sat, 26 Sep 2026 17:28:31 +0100
-Subject: [PATCH 1/4] Colour the player power bar for power types X-Perl has no
+Subject: [PATCH] Colour the player power bar for power types X-Perl has no
  colour for
 
 XPerl_SetManaBarType only knows mana, rage, focus and energy. For other

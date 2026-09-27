@@ -1,0 +1,39 @@
+From 01e3ba8e4cc0b9bd0a88a76c1be0572e48426849 Mon Sep 17 00:00:00 2001
+From: Hussain-maker <79055482+Hussain-maker@users.noreply.github.com>
+Date: Sat, 26 Sep 2026 23:49:04 +0100
+Subject: [PATCH] Unit tooltips: don't let GameTooltip_UnitColor error on
+ secret units
+
+XPerl_PlayerTip recoloured the tooltip name with GameTooltip_UnitColor.
+Called from addon code in combat against enemies it performs boolean tests
+on secret values and errors ("execution tainted by XPerlForever_..."), seen
+when hovering the target-of-target frame. SetUnit already colours the name,
+so the recolour is now attempted with pcall and skipped if it fails.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ XPerlForever/XPerlForever.lua | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/XPerlForever/XPerlForever.lua b/XPerlForever/XPerlForever.lua
+index c93984d..ef51d1a 100644
+--- a/XPerlForever/XPerlForever.lua
++++ b/XPerlForever/XPerlForever.lua
+@@ -2243,8 +2243,12 @@ function XPerl_PlayerTip(self, unitid)
+ 
+ 	GameTooltip_SetDefaultAnchor(GameTooltip, self)
+ 	GameTooltip:SetUnit(unitid)
+-	local r, g, b = GameTooltip_UnitColor(unitid)
+-	GameTooltipTextLeft1:SetTextColor(r, g, b)
++	-- Called from addon code, GameTooltip_UnitColor errors on secret unit values
++	-- (enemies in combat); SetUnit has already coloured the name, so keep that
++	local ok, r, g, b = pcall(GameTooltip_UnitColor, unitid)
++	if (ok and r) then
++		GameTooltipTextLeft1:SetTextColor(r, g, b)
++	end
+ 	GameTooltip:Show()
+ 
+ 	if (XPerl_RaidTipExtra) then
+-- 
+2.48.1.windows.1
+

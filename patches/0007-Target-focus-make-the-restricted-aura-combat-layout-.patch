@@ -1,0 +1,399 @@
+From 42a94ceaf304337e354f50de11ab6c7c61d4cce5 Mon Sep 17 00:00:00 2001
+From: Hussain-maker <79055482+Hussain-maker@users.noreply.github.com>
+Date: Sat, 26 Sep 2026 23:21:31 +0100
+Subject: [PATCH] Target/focus: make the restricted-aura (combat) layout match
+ X-Perl's
+
+While aura data is secret (arena, rated PvP, M+, raid combat) the target and
+focus frames show auras through Blizzard's AuraContainer, which ignored most
+of X-Perl's aura settings. Now:
+
+- The aura filter options apply, with the same rules as the normal layout:
+  castable buffs, "only my buffs" on friends, "only my debuffs" on enemies,
+  curable debuffs on friends.
+- "Buff Countdown" shows an X-Perl-style countdown (yellow, whole seconds)
+  drawn by the game via a duration text binding, hidden above the
+  "Countdown Start" time by a step colour curve. Falls back to Blizzard's
+  countdown numbers styled like X-Perl's if the API is unavailable.
+- "Wrap Buffs" wraps at the frame's full width like the normal layout, and
+  "Target Buff Rows" caps the number of icons.
+- Debuffs get X-Perl's debuff border, coloured by dispel type by the game.
+- New option "Key Enemy Buffs" (off by default): on enemies, show only
+  important buffs, then purgeable ones.
+
+Core: XPerl_AuraContainer_AddGroup (one group with X-Perl's button setup;
+used by XPerl_AuraContainer_Create, which gains an optional maxCount). The
+buff blacklist module now handles every buff group of a container.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ XPerlForever/XPerlForever.lua                 | 122 +++++++++++++++---
+ .../XPerlForever_AuraBlacklist.lua            |  22 +++-
+ .../XPerlForever_FrameOptions.xml             |  36 ++++++
+ XPerlForever_Options/localization.lua         |   4 +
+ XPerlForever_Target/XPerlForever_Target.lua   |  43 +++++-
+ 5 files changed, 195 insertions(+), 32 deletions(-)
+
+diff --git a/XPerlForever/XPerlForever.lua b/XPerlForever/XPerlForever.lua
+index 938b11a..c93984d 100644
+--- a/XPerlForever/XPerlForever.lua
++++ b/XPerlForever/XPerlForever.lua
+@@ -349,11 +349,35 @@ function XPerl_HasAuraContainerNow()
+ 	return present
+ end
+ 
+--- XPerl_AuraContainer_Create(self, holderKey, name, groupKey, filter, size, lineSize, showSwipe)
++-- XPerl_AuraContainer_AddGroup(self, container, groupKey, filter, size, showSwipe, maxCount, layoutIndex)
++-- Adds one aura group with X-Perl's button setup. A container can hold several
++-- groups, laid out in layoutIndex order. maxCount defaults to 40.
++function XPerl_AuraContainer_AddGroup(self, container, groupKey, filter, size, showSwipe, maxCount, layoutIndex)
++	container:AddAuraGroup(groupKey, filter, {
++		maxFrameCount = maxCount or 40,
++		layout = {
++			elementWidth = size,
++			elementHeight = size,
++			elementSpacing = 1,
++			lineSpacing = 1,
++			layoutIndex = layoutIndex or 1,
++		},
++		initializeFrame = function(button)
++			XPerl_AuraContainer_InitButtonCommon(button, size, showSwipe)
++		end,
++	})
++	-- Z-Perl Forever: optional hook XPerl_BuffContainerFilter(frame, container, groupKey, filter),
++	-- called once for each new aura group before it is live (so it may be configured while secret).
++	if (XPerl_BuffContainerFilter) then
++		XPerl_BuffContainerFilter(self, container, groupKey, filter)
++	end
++end
++
++-- XPerl_AuraContainer_Create(self, holderKey, name, groupKey, filter, size, lineSize, showSwipe, maxCount)
+ -- Builds a holder + AuraContainer pair; caller positions the holder. Every frame
+ -- goes through here so the five requirements that each silently break rendering
+ -- live in one place -- see CLAUDE.md pattern 15 before changing anything here.
+-function XPerl_AuraContainer_Create(self, holderKey, name, groupKey, filter, size, lineSize, showSwipe)
++function XPerl_AuraContainer_Create(self, holderKey, name, groupKey, filter, size, lineSize, showSwipe, maxCount)
+ 	local level = self:GetFrameLevel() + 10
+ 	local holder = self[holderKey]
+ 	if (not holder) then
+@@ -369,24 +393,7 @@ function XPerl_AuraContainer_Create(self, holderKey, name, groupKey, filter, siz
+ 	container:SetFrameLevel(level)
+ 	container:SetSize(1, 1)
+ 	container:SetUnit(self.partyid)
+-	container:AddAuraGroup(groupKey, filter, {
+-		maxFrameCount = 40,
+-		layout = {
+-			elementWidth = size,
+-			elementHeight = size,
+-			elementSpacing = 1,
+-			lineSpacing = 1,
+-			layoutIndex = 1,
+-		},
+-		initializeFrame = function(button)
+-			XPerl_AuraContainer_InitButtonCommon(button, size, showSwipe)
+-		end,
+-	})
+-	-- Z-Perl Forever: optional hook XPerl_BuffContainerFilter(frame, container, groupKey, filter),
+-	-- called once for each new aura group before it is live (so it may be configured while secret).
+-	if (XPerl_BuffContainerFilter) then
+-		XPerl_BuffContainerFilter(self, container, groupKey, filter)
+-	end
++	XPerl_AuraContainer_AddGroup(self, container, groupKey, filter, size, showSwipe, maxCount, 1)
+ 	if (container.SetFlowLayoutMaximumLineSize) then
+ 		container:SetFlowLayoutMaximumLineSize(lineSize)
+ 	end
+@@ -422,6 +429,47 @@ function XPerl_AuraContainer_SafeToReconfigure()
+ 	return not XPerl_AurasSecret()
+ end
+ 
++-- XPerl_AuraContainer_SetCountdown(button, size)
++-- X-Perl's own countdown can't run while aura times are secret, so the game draws
++-- it instead through a duration text binding: whole seconds in X-Perl's yellow,
++-- made fully transparent above the "Countdown Start" time by a step colour curve.
++-- Returns false if the client lacks the API, so the caller can fall back.
++-- (In a do block to keep the file's main chunk under Lua's 200-local limit.)
++do
++local countdownFormatter, countdownCurve, countdownCurveStart
++function XPerl_AuraContainer_SetCountdown(button, size)
++	if (not (button.SetDurationText and C_StringUtil and C_StringUtil.CreateNumericRuleFormatter and C_CurveUtil and C_CurveUtil.CreateColorCurve and Enum.DurationTextBindingProperty)) then
++		return false
++	end
++	local start = XPerlDB.buffs.countdownStart or 20
++	if (not countdownFormatter) then
++		countdownFormatter = C_StringUtil.CreateNumericRuleFormatter()
++		countdownFormatter:AddBreakpoint({threshold = 0, step = 1, rounding = Enum.NumericRuleFormatRounding.Down, format = "%d"})
++	end
++	if (countdownCurveStart ~= start) then
++		countdownCurve = C_CurveUtil.CreateColorCurve()
++		countdownCurve:SetType(Enum.LuaCurveType.Step)
++		countdownCurve:AddPoint(0, CreateColor(1, 1, 0, 1))
++		countdownCurve:AddPoint(start, CreateColor(1, 1, 0, 0))
++		countdownCurveStart = start
++	end
++	local text = button.xperlCountdown
++	if (not text) then
++		text = button.cooldown:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
++		text:SetPoint("TOPLEFT", button)
++		text:SetPoint("BOTTOMRIGHT", button, -1, 2)
++		button.xperlCountdown = text
++	end
++	local file, _, flags = GameFontNormalHuge:GetFont()
++	text:SetFont(file, floor(size * 0.62 + 0.5), flags)
++	local property = Enum.DurationTextBindingProperty.RemainingDuration
++	return (pcall(button.SetDurationText, button, text, {
++		textFormat = {formatString = "{}", components = {{property = property, formatter = countdownFormatter}}},
++		textColor = {curve = countdownCurve, property = property},
++	}))
++end
++end
++
+ -- XPerl_AuraContainer_InitButtonCommon(button, size, showSwipe)
+ -- An aura button arrives blank: no icon texture, no cooldown. Skip creating them
+ -- and it still sizes, lays out and tooltips correctly while drawing nothing at
+@@ -438,6 +486,28 @@ function XPerl_AuraContainer_InitButtonCommon(button, size, showSwipe)
+ 		button.icon:SetAllPoints(button)
+ 		button:SetIcon(button.icon)
+ 	end
++	-- X-Perl's debuff border (XPerl_DeBuffTemplate), coloured by dispel type. The
++	-- game colours it by type name from Blizzard's debuff colours (the table
++	-- X-Perl's own colours come from), so it works while secret; buffs get no
++	-- border, as in the normal layout.
++	if (not button.xperlBorder and button.AddDispelTypeTexture and Enum.CustomAuraButtonDispelTypeTextureStyle) then
++		local border = button:CreateTexture(nil, "OVERLAY")
++		border:SetTexture("Interface\\Buttons\\UI-Debuff-Overlays")
++		border:SetTexCoord(0.296875, 0.5703125, 0, 0.515625)
++		border:SetPoint("TOPLEFT", button, "TOPLEFT", -1, 1)
++		border:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT")
++		local ok = pcall(button.AddDispelTypeTexture, button, border, {
++			style = Enum.CustomAuraButtonDispelTypeTextureStyle.PreserveAsset,
++			showWhenHarmful = true,
++			showWhenHelpful = false,
++			showWithoutDispelType = true,
++		})
++		if (ok) then
++			button.xperlBorder = border
++		else
++			border:Hide()
++		end
++	end
+ 	if (not button.cooldown and button.SetDurationCooldown) then
+ 		button.cooldown = CreateFrame("Cooldown", nil, button, "CooldownFrameTemplate")
+ 		button.cooldown:SetAllPoints(button)
+@@ -455,8 +525,18 @@ function XPerl_AuraContainer_InitButtonCommon(button, size, showSwipe)
+ 		-- XPerl_GetBuffButton: without it every icon force-shows Blizzard's
+ 		-- numbers whatever the option says, and OmniCC-style addons attach too.
+ 		local bconf = XPerlDB and XPerlDB.buffs
++		-- X-Perl's "Buff Countdown" option: its own-style countdown drawn by the game,
++		-- or, if that isn't available, Blizzard's numbers styled like X-Perl's.
++		local xperlCountdown = bconf and bconf.countdown and not bconf.blizzard and size
++		local ownCountdown = xperlCountdown and XPerl_AuraContainer_SetCountdown(button, size)
+ 		if (button.cooldown.SetHideCountdownNumbers) then
+-			button.cooldown:SetHideCountdownNumbers(not (bconf and bconf.blizzard))
++			button.cooldown:SetHideCountdownNumbers(ownCountdown or not (bconf and (bconf.blizzard or bconf.countdown)))
++		end
++		local text = xperlCountdown and not ownCountdown and button.cooldown.GetCountdownFontString and button.cooldown:GetCountdownFontString()
++		if (text) then
++			local file, _, flags = GameFontNormalHuge:GetFont()
++			text:SetFont(file, floor(size * 0.62 + 0.5), flags)
++			text:SetTextColor(1, 1, 0)
+ 		end
+ 		button.cooldown.noCooldownCount = not (bconf and bconf.omnicc) or nil
+ 	end
+diff --git a/XPerlForever_AuraBlacklist/XPerlForever_AuraBlacklist.lua b/XPerlForever_AuraBlacklist/XPerlForever_AuraBlacklist.lua
+index b3b99a1..cbd64f7 100644
+--- a/XPerlForever_AuraBlacklist/XPerlForever_AuraBlacklist.lua
++++ b/XPerlForever_AuraBlacklist/XPerlForever_AuraBlacklist.lua
+@@ -147,8 +147,8 @@ end
+ 
+ -- Restricted-aura mode (R2b) ------------------------------------------------
+ -- While XPerl_AurasSecret() is true the frames show buffs through Blizzard's
+--- AuraContainer; the blacklist is handed to its buff group as a candidate
+--- filter. "Show if mine" cannot be honoured there (one group).
++-- AuraContainer; the blacklist is handed to its buff groups as a candidate
++-- filter. "Show if mine" cannot be honoured there.
+ 
+ local GetSpellAuraSecrecy = C_Secrets and C_Secrets.GetSpellAuraSecrecy
+ local NEVER_SECRET = Enum and Enum.SecrecyLevel and Enum.SecrecyLevel.NeverSecret
+@@ -159,7 +159,7 @@ local filtersAll = FILTERS_NONE	-- {excludeSpellIDs = every listed ID}
+ local filtersNS = FILTERS_NONE	-- {excludeSpellIDs = never-secret listed IDs}
+ local setsDirty = true			-- rebuild the sets on next use
+ local liveContainers = {}		-- [frame] = its current buff AuraContainer
+-local liveKeys = {}				-- [frame] = that container's group key
++local liveKeys = {}				-- [frame] = list of that container's buff group keys
+ local appliedFilters = {}		-- [frame] = filters table last applied to its current container
+ local pendingApply
+ local retryTicker
+@@ -235,7 +235,11 @@ local function ApplyContainer(frame, fresh)
+ 		appliedFilters[frame] = filters
+ 		return
+ 	end
+-	if (pcall(container.SetAuraGroupCandidateFilters, container, liveKeys[frame], filters)) then
++	local ok = true
++	for _, key in ipairs(liveKeys[frame]) do
++		ok = pcall(container.SetAuraGroupCandidateFilters, container, key, filters) and ok
++	end
++	if (ok) then
+ 		appliedFilters[frame] = filters
+ 		if (not fresh and container:IsShown() and container.UpdateAllAuras) then
+ 			container:UpdateAllAuras()
+@@ -276,11 +280,15 @@ end
+ -- Called by XPerl_AuraContainer_Create for every new group. A new group is not
+ -- live yet, so it may be configured even while auras are secret.
+ function XPerl_BuffContainerFilter(frame, container, groupKey, filter)
+-	if (filter ~= "HELPFUL" or not frame or not filteredUnits[frame.partyid]) then
++	if (type(filter) ~= "string" or filter:find("HELPFUL", 1, true) ~= 1 or not frame or not filteredUnits[frame.partyid]) then
+ 		return
+ 	end
+-	liveContainers[frame] = container
+-	liveKeys[frame] = groupKey
++	-- A frame's buff container can hold several buff groups: collect their keys
++	if (liveContainers[frame] ~= container) then
++		liveContainers[frame] = container
++		liveKeys[frame] = {}
++	end
++	tinsert(liveKeys[frame], groupKey)
+ 	appliedFilters[frame] = nil
+ 	ApplyContainer(frame, true)
+ end
+diff --git a/XPerlForever_Options/XPerlForever_FrameOptions.xml b/XPerlForever_Options/XPerlForever_FrameOptions.xml
+index b8a71bd..4e55369 100644
+--- a/XPerlForever_Options/XPerlForever_FrameOptions.xml
++++ b/XPerlForever_Options/XPerlForever_FrameOptions.xml
+@@ -8959,6 +8959,24 @@
+ 						</Scripts>
+ 					</CheckButton>
+ 
++					<CheckButton name="$parent_KeyBuffs" inherits="XPerlCheckButtonTemplate">
++						<Anchors>
++							<Anchor point="LEFT" relativeTo="$parent_BuffsFirst" relativePoint="RIGHT">
++								<Offset>
++									<AbsDimension x="80" y="0"/>
++								</Offset>
++							</Anchor>
++						</Anchors>
++						<Scripts>
++							<OnLoad>
++								XPerl_OptionsSetMyText(self, "XPERL_CONF_TARGET_KEYBUFFS")
++								self.configBase = "XPerlDB.target.buffs"
++								self.configIndex = "keyOnly"
++								self.configClick = XPerl_Target_Reset
++							</OnLoad>
++						</Scripts>
++					</CheckButton>
++
+ 					<CheckButton name="$parent_DebuffHighlight" inherits="XPerlCheckButtonTemplate">
+ 						<Anchors>
+ 							<Anchor point="TOPLEFT" relativeTo="$parent_Above" relativePoint="BOTTOMLEFT">
+@@ -10539,6 +10557,24 @@
+ 						</Scripts>
+ 					</CheckButton>
+ 
++					<CheckButton name="$parent_KeyBuffs" inherits="XPerlCheckButtonTemplate">
++						<Anchors>
++							<Anchor point="LEFT" relativeTo="$parent_BuffsFirst" relativePoint="RIGHT">
++								<Offset>
++									<AbsDimension x="80" y="0"/>
++								</Offset>
++							</Anchor>
++						</Anchors>
++						<Scripts>
++							<OnLoad>
++								XPerl_OptionsSetMyText(self, "XPERL_CONF_FOCUS_KEYBUFFS")
++								self.configBase = "XPerlDB.focus.buffs"
++								self.configIndex = "keyOnly"
++								self.configClick = XPerl_Target_Reset
++							</OnLoad>
++						</Scripts>
++					</CheckButton>
++
+ 					<CheckButton name="$parent_DebuffHighlight" inherits="XPerlCheckButtonTemplate">
+ 						<Anchors>
+ 							<Anchor point="TOPLEFT" relativeTo="$parent_Above" relativePoint="BOTTOMLEFT">
+diff --git a/XPerlForever_Options/localization.lua b/XPerlForever_Options/localization.lua
+index 3713daf..388c653 100644
+--- a/XPerlForever_Options/localization.lua
++++ b/XPerlForever_Options/localization.lua
+@@ -351,6 +351,8 @@ XPERL_CONF_TARGET_BUFFSABOVE			= "Buffs Above"
+ XPERL_CONF_TARGET_BUFFSABOVE_DESC		= "Display Target's buffs above the frame instead of below."
+ XPERL_CONF_TARGET_BUFFSFIRST			= "Buffs First"
+ XPERL_CONF_TARGET_BUFFSFIRST_DESC		= "Always show Target's buffs before its debuffs, also on enemies (by default enemies show debuffs first)."
++XPERL_CONF_TARGET_KEYBUFFS				= "Key Enemy Buffs"
++XPERL_CONF_TARGET_KEYBUFFS_DESC			= "In combat while aura details are hidden (arena, instances), show only important and purgeable buffs on enemies."
+ XPERL_CONF_TARGET_BIGSTEALABLE			= "Big Stealable Buffs"
+ XPERL_CONF_TARGET_BIGSTEALABLE_DESC		= "Show stealable buffs on enable targets first and larger than the others."
+ XPERL_CONF_TARGET_BIGBUFFS				= "Big Buffs"
+@@ -562,6 +564,8 @@ XPERL_CONF_FOCUS_BUFFSABOVE				= "Buffs Above"
+ XPERL_CONF_FOCUS_BUFFSABOVE_DESC		= "Display Focus's buffs above the frame instead of below."
+ XPERL_CONF_FOCUS_BUFFSFIRST			= "Buffs First"
+ XPERL_CONF_FOCUS_BUFFSFIRST_DESC		= "Always show Focus's buffs before its debuffs, also on enemies (by default enemies show debuffs first)."
++XPERL_CONF_FOCUS_KEYBUFFS				= "Key Enemy Buffs"
++XPERL_CONF_FOCUS_KEYBUFFS_DESC			= "In combat while aura details are hidden (arena, instances), show only important and purgeable buffs on enemies."
+ XPERL_CONF_FOCUS_BIGBUFFS				= XPERL_CONF_TARGET_BIGBUFFS
+ XPERL_CONF_FOCUS_BIGBUFFS_DESC			= XPERL_CONF_TARGET_BIGBUFFS_DESC
+ XPERL_CONF_FOCUS_BIGDEBUFFS				= XPERL_CONF_TARGET_BIGDEBUFFS
+diff --git a/XPerlForever_Target/XPerlForever_Target.lua b/XPerlForever_Target/XPerlForever_Target.lua
+index d66ce56..6aee5d3 100644
+--- a/XPerlForever_Target/XPerlForever_Target.lua
++++ b/XPerlForever_Target/XPerlForever_Target.lua
+@@ -428,19 +428,54 @@ local function XPerl_Target_AuraContainer_Setup(self)
+ 		return
+ 	end
+ 
+-	local buffsFirst = self.conf.buffs.first or not XPerl_SafeBool(UnitCanAttack("player", self.partyid), false)
++	local canAttack = XPerl_SafeBool(UnitCanAttack("player", self.partyid), false)
++	local buffsFirst = self.conf.buffs.first or not canAttack
++	-- Same rules as XPerl_Unit_UpdateBuffs: "only mine" is for friendly buffs and
++	-- enemy debuffs, "curable" only for friendly debuffs. Blizzard applies them.
++	local buffFilter = "HELPFUL"..(self.conf.buffs.castable == 1 and "|RAID" or "")..((self.conf.buffs.onlyMine and not canAttack) and "|PLAYER" or "")
++	local debuffFilter = "HARMFUL"..((not canAttack and self.conf.debuffs.curable == 1) and "|RAID" or "")..((self.conf.debuffs.onlyMine and canAttack) and "|PLAYER" or "")
+ 	-- XPerlDB.buffs.cooldown is a single global setting shared by buffs and
+ 	-- debuffs by design (its own options-panel description says so) -- there
+ 	-- is no XPerlDB.debuffs table. Do not split this into a per-type value.
+ 	local showSwipe = conf.buffs.cooldown and true or false
+-	local lineSize = self.conf.buffs.wrap and self.buffFrame:GetWidth() or 2000
++	-- Wrap at the frame's full width, the same row width as the normal layout
++	-- (XPerl_Unit_BuffSpacing), not the narrower buffFrame
++	local lineSize = 2000
++	if (self.conf.buffs.wrap) then
++		lineSize = self.statsFrame:GetWidth()
++		if (self.portraitFrame and self.portraitFrame:IsShown()) then
++			lineSize = lineSize - 2 + self.portraitFrame:GetWidth()
++		end
++		if (self.levelFrame and self.levelFrame:IsShown()) then
++			lineSize = lineSize - 2 + self.levelFrame:GetWidth()
++		end
++	end
++
++	-- Same row limit as the normal layout ("Target Buff Rows"): at most that many
++	-- rows of icons per group when wrapping
++	local rows = self.conf.buffs.rows
++	local function MaxIcons(size)
++		if (self.conf.buffs.wrap and rows and rows > 0) then
++			return min(40, max(1, floor((lineSize + 1) / (size + 1))) * rows)
++		end
++	end
++	local buffMax, debuffMax = MaxIcons(self.conf.buffs.size), MaxIcons(self.conf.debuffs.size)
++	-- "Key Enemy Buffs": on enemies show only important buffs, then purgeable ones
++	-- (a second group, so an aura that is both appears once)
++	local keyBuffs = self.conf.buffs.keyOnly and canAttack
++	if (keyBuffs) then
++		buffFilter = "HELPFUL|IMPORTANT"
++	end
+ 
+ 	-- buffFrame and debuffFrame are one XML rectangle, so each container takes
+ 	-- half, friend/enemy deciding which goes on top.
+ 	local buffContainer, buffHalf = XPerl_AuraContainer_Create(self, "buffHalfFrame",
+-		self:GetName().."AuraBuffs", "buffs", "HELPFUL", self.conf.buffs.size, lineSize, showSwipe)
++		self:GetName().."AuraBuffs", "buffs", buffFilter, self.conf.buffs.size, lineSize, showSwipe, buffMax)
++	if (keyBuffs) then
++		XPerl_AuraContainer_AddGroup(self, buffContainer, "buffsPurgeable", "HELPFUL|DISPELLABLE|!IMPORTANT", self.conf.buffs.size, showSwipe, buffMax, 2)
++	end
+ 	local debuffContainer, debuffHalf = XPerl_AuraContainer_Create(self, "debuffHalfFrame",
+-		self:GetName().."AuraDebuffs", "debuffs", "HARMFUL", self.conf.debuffs.size, lineSize, showSwipe)
++		self:GetName().."AuraDebuffs", "debuffs", debuffFilter, self.conf.debuffs.size, lineSize, showSwipe, debuffMax)
+ 
+ 	local firstHalf, secondHalf = buffHalf, debuffHalf
+ 	if (not buffsFirst) then
+-- 
+2.48.1.windows.1
+
