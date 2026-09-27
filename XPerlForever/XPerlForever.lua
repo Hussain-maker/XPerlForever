@@ -1839,6 +1839,19 @@ function XPerl_UnitClassFile(unit)
 	end
 end
 
+-- XPerl_SetClassPortrait(texture, class)
+-- Round class icon in a portrait texture (SetPortraitToTexture no longer exists).
+-- Returns false for an unknown class.
+function XPerl_SetClassPortrait(texture, class)
+	local coords = class and CLASS_ICON_TCOORDS[class]
+	if (not coords) then
+		return false
+	end
+	texture:SetTexture("Interface\\TargetingFrame\\UI-Classes-Circles")
+	texture:SetTexCoord(unpack(coords))
+	return true
+end
+
 -- XPerl_Toggle
 function XPerl_Toggle()
 	if (XPerlLocked == 1) then
@@ -4210,26 +4223,21 @@ function XPerl_Unit_UpdatePortrait(self, force)
 			self.portraitFrame.portrait3D:Hide()
 			self.portraitFrame.portrait3D.guid = nil
 			portrait:SetTexture(nil)
+			portrait:SetTexCoord(0, 1, 0, 1)
 			SetPortraitTexture(portrait, self.partyid)
+			-- Only when the game clearly gave no portrait (an unreadable answer
+			-- usually still means it drew one)
 			local texture = portrait:GetTexture()
-			if (not (XPerl_CanAccess(texture) and texture)) then
-				local class = XPerl_UnitClassFile(self.partyid)
-				if (class) then
-					SetPortraitToTexture(portrait, "Interface\\Icons\\ClassIcon_"..class)
-				end
+			if (XPerl_CanAccess(texture) and not texture) then
+				XPerl_SetClassPortrait(portrait, XPerl_UnitClassFile(self.partyid))
 			end
 			portrait:Show()
 			return
 		end
-		if self.conf.classPortrait then
-			local _, englishClass = UnitClass(self.partyid)
-			if UnitIsPlayer(self.partyid) and englishClass then
-				SetPortraitToTexture(self.portraitFrame.portrait, "Interface\\Icons\\ClassIcon_"..englishClass)
-			else
-				SetPortraitTexture(self.portraitFrame.portrait, self.partyid)
-			end
-		else
-			SetPortraitTexture(self.portraitFrame.portrait, self.partyid)
+		local portrait = self.portraitFrame.portrait
+		if not (self.conf.classPortrait and XPerl_SafeBool(UnitIsPlayer(self.partyid), false) and XPerl_SetClassPortrait(portrait, XPerl_UnitClassFile(self.partyid))) then
+			portrait:SetTexCoord(0, 1, 0, 1)
+			SetPortraitTexture(portrait, self.partyid)
 		end
 		-- If a player moves out of range for a 3D portrait, it will show their proper 2D one.
 		-- NPC 3D portraits also frequently fail to render at all inside instances
