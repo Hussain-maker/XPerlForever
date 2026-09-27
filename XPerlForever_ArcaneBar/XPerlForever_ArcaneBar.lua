@@ -537,7 +537,10 @@ function XPerl_ArcaneBar_OnEvent(self, event, unit, ...)
 		if not XPerl_ArcaneBar_SameCast(self.castID, lineGUID) then
 			return
 		end
-		if (not self.fadeOut and self:IsShown() and not ActiveCasting(self)) then
+		-- Z-Perl Forever: a readable matching cast ID is this cast (as Blizzard's bar); the game
+		-- can still report it as active when the event fires, so only fall back to that check
+		local sameCast = self.casting and XPerl_CanAccess(self.castID) and XPerl_CanAccess(lineGUID) and self.castID ~= 0
+		if (not self.fadeOut and self:IsShown() and (sameCast or not ActiveCasting(self))) then
 			if (event == "UNIT_SPELLCAST_FAILED") then
 				XPerl_ArcaneBar_ShowFailed(self, FAILED)
 			else
