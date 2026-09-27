@@ -173,6 +173,15 @@ health bar. The new Global option skips that glow on every X-Perl cast bar; the 
 - Interrupted casts/channels show Blizzard's "Interrupted by <Name>" in class colour when the interrupter can
   be read; otherwise "Interrupted" as before.
 
+### 16. Cast bars: interrupting your own cast early showed a normal finish (bug fix)
+`XPerlForever_ArcaneBar` – **+4 / −1**
+
+When a cast is cancelled (e.g. by moving), the game can still report it as active when
+`UNIT_SPELLCAST_INTERRUPTED`/`FAILED` fires. X-Perl ignored the event if the cast had more than 0.5 s left, so
+the bar finished green on the following STOP instead of showing "Interrupted". When the event's cast ID is
+readable and matches the bar's cast, it is now trusted (as Blizzard's bar does); the time check remains the
+fallback for channels and unreadable IDs.
+
 ## Totals
 
 | Change | Files | Lines |
@@ -192,5 +201,6 @@ health bar. The new Global option skips that glow on every X-Perl cast bar; the 
 | 13. SetPortraitToTexture removed | XPerlForever.lua | +22 / −14 |
 | 14. No Cast Bar Flash option | ArcaneBar, Options | +28 / −4 |
 | 15. Interrupt colours, kicked channels, "Interrupted by" | ArcaneBar, Options | +220 / −22 |
+| 16. Early-interrupted own casts | ArcaneBar | +4 / −1 |
 
 Thanks for keeping X-Perl alive!

@@ -1,0 +1,30 @@
+From a2556196e92638c86e6b2a673d5fc02e3d9d945f Mon Sep 17 00:00:00 2001
+From: Hussain-maker <79055482+Hussain-maker@users.noreply.github.com>
+Date: Sun, 27 Sep 2026 12:10:00 +0100
+Subject: [PATCH] Cast bars: show Interrupted when your own cast is cancelled
+ early
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ XPerlForever_ArcaneBar/XPerlForever_ArcaneBar.lua | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/XPerlForever_ArcaneBar/XPerlForever_ArcaneBar.lua b/XPerlForever_ArcaneBar/XPerlForever_ArcaneBar.lua
+index 1101487..b406661 100644
+--- a/XPerlForever_ArcaneBar/XPerlForever_ArcaneBar.lua
++++ b/XPerlForever_ArcaneBar/XPerlForever_ArcaneBar.lua
+@@ -537,7 +537,10 @@ function XPerl_ArcaneBar_OnEvent(self, event, unit, ...)
+ 		if not XPerl_ArcaneBar_SameCast(self.castID, lineGUID) then
+ 			return
+ 		end
+-		if (not self.fadeOut and self:IsShown() and not ActiveCasting(self)) then
++		-- Z-Perl Forever: a readable matching cast ID is this cast (as Blizzard's bar); the game
++		-- can still report it as active when the event fires, so only fall back to that check
++		local sameCast = self.casting and XPerl_CanAccess(self.castID) and XPerl_CanAccess(lineGUID) and self.castID ~= 0
++		if (not self.fadeOut and self:IsShown() and (sameCast or not ActiveCasting(self))) then
+ 			if (event == "UNIT_SPELLCAST_FAILED") then
+ 				XPerl_ArcaneBar_ShowFailed(self, FAILED)
+ 			else
+-- 
+2.48.1.windows.1
+
