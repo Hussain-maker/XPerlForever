@@ -29,6 +29,10 @@ local UnitChannelInfo = UnitChannelInfo
 local GetNetStats = GetNetStats
 local CreateColor = CreateColor
 local CreateFrame = CreateFrame
+local UnitCanAttack = UnitCanAttack
+local UnitExists = UnitExists
+local C_Spell = C_Spell
+local IsSpellKnownOrOverridesKnown = IsSpellKnownOrOverridesKnown
 
 -- Z-Perl Forever: cast times of other units can be secret in restricted content.
 -- When the client offers duration objects the bar is driven by Blizzard
@@ -136,12 +140,155 @@ local barColours = {
 	main = {r = 1.0, g = 0.7, b = 0.0},
 	channel = {r = 0.0, g = 1.0, b = 0.0},
 	success = {r = 0.0, g = 1.0, b = 0.0},
-	failure = {r = 1.0, g = 0.0, b = 0.0}
+	failure = {r = 1.0, g = 0.0, b = 0.0},
+	kick = {r = 1.0, g = 0.0, b = 0.0157}
 }
 
 local events = {
 	"UNIT_SPELLCAST_START", "UNIT_SPELLCAST_STOP", "UNIT_SPELLCAST_FAILED", "UNIT_SPELLCAST_INTERRUPTED", "UNIT_SPELLCAST_INTERRUPTIBLE", "UNIT_SPELLCAST_NOT_INTERRUPTIBLE", "UNIT_SPELLCAST_DELAYED", "UNIT_SPELLCAST_CHANNEL_START", "UNIT_SPELLCAST_CHANNEL_UPDATE", "UNIT_SPELLCAST_CHANNEL_STOP", "PLAYER_ENTERING_WORLD"
 }
+
+-- Z-Perl Forever: interrupt readiness for target/focus colouring (as BetterBlizzFrames).
+-- Cooldowns are secret in combat, so a hidden Cooldown frame is fed the duration
+-- object and its shown state tells us if the interrupt is ready.
+local interruptSpells = {
+	1766,	-- Kick (Rogue)
+	2139,	-- Counterspell (Mage)
+	6552,	-- Pummel (Warrior)
+	19647,	-- Spell Lock (Warlock)
+	47528,	-- Mind Freeze (Death Knight)
+	57994,	-- Wind Shear (Shaman)
+	96231,	-- Rebuke (Paladin)
+	106839,	-- Skull Bash (Feral)
+	115781,	-- Optical Blast (Warlock)
+	116705,	-- Spear Hand Strike (Monk)
+	132409,	-- Spell Lock (Warlock)
+	119910,	-- Spell Lock (Warlock Pet)
+	89766,	-- Axe Toss (Warlock Pet)
+	171138,	-- Shadow Lock (Warlock)
+	147362,	-- Countershot (Hunter)
+	183752,	-- Disrupt (Demon Hunter)
+	187707,	-- Muzzle (Hunter)
+	212619,	-- Call Felhunter (Warlock)
+	351338,	-- Quell (Evoker)
+	97547,	-- Solar Beam
+	78675,	-- Solar Beam
+	15487,	-- Silence
+}
+
+-- XPerl_ArcaneBar_GetInterruptSpell
+local function XPerl_ArcaneBar_GetInterruptSpell()
+	if (not IsSpellKnownOrOverridesKnown) then
+		return nil
+	end
+	for i = 1, #interruptSpells do
+		local id = interruptSpells[i]
+		if (IsSpellKnownOrOverridesKnown(id) or (UnitExists("pet") and IsSpellKnownOrOverridesKnown(id, true))) then
+			return id
+		end
+	end
+	return nil
+end
+
+local kickTracker = CreateFrame("Frame")
+kickTracker.cooldown = CreateFrame("Cooldown", nil, kickTracker, "CooldownFrameTemplate")
+if (kickTracker.cooldown.SetMinimumCountdownDuration) then
+	kickTracker.cooldown:SetMinimumCountdownDuration(0)
+end
+
+-- XPerl_ArcaneBar_UpdateKickReady
+-- Returns true if the ready state changed
+local function XPerl_ArcaneBar_UpdateKickReady()
+	local old = kickTracker.ready
+	local ready
+	local spellID = kickTracker.spellID
+	if (spellID and C_Spell and C_Spell.GetSpellCooldownDuration and kickTracker.cooldown.SetCooldownFromDurationObject) then
+		local duration = C_Spell.GetSpellCooldownDuration(spellID)
+		if (duration) then
+			kickTracker.cooldown:SetCooldownFromDurationObject(duration)
+			local shown = kickTracker.cooldown:IsShown()
+			if (XPerl_CanAccess(shown)) then
+				ready = not shown
+			end
+		end
+	end
+	kickTracker.ready = ready
+	return old ~= ready
+end
+
+-- XPerl_ArcaneBar_SetCastColour
+-- Colours a starting cast/channel, red on a hostile target/focus while our interrupt is on cooldown
+-- noRefresh: the caller has just refreshed the ready state
+local function XPerl_ArcaneBar_SetCastColour(self, channeling, noRefresh)
+	local c = channeling and barColours.channel or barColours.main
+	if (conf.castBarKickColour and (self.unit == "target" or self.unit == "focus")) then
+		local hostile = UnitCanAttack("player", self.unit)
+		if (XPerl_CanAccess(hostile) and hostile) then
+			if (kickTracker.spellID == nil) then
+				-- false: no interrupt known, not scanned again until re-detect
+				kickTracker.spellID = XPerl_ArcaneBar_GetInterruptSpell() or false
+				noRefresh = nil
+			end
+			if (not noRefresh) then
+				XPerl_ArcaneBar_UpdateKickReady()
+			end
+			if (kickTracker.ready == false) then
+				c = barColours.kick
+			end
+		end
+	end
+	self:SetStatusBarColor(c.r, c.g, c.b, conf.transparency.frame)
+end
+
+-- XPerl_ArcaneBar_KickRepaint
+-- Repaints active target/focus bars from the current ready state
+local function XPerl_ArcaneBar_KickRepaint()
+	local v = ArcaneBars.target
+	if (v and v.bar:IsShown() and (v.bar.casting or v.bar.channeling)) then
+		XPerl_ArcaneBar_SetCastColour(v.bar, v.bar.channeling, true)
+	end
+	v = ArcaneBars.focus
+	if (v and v.bar:IsShown() and (v.bar.casting or v.bar.channeling)) then
+		XPerl_ArcaneBar_SetCastColour(v.bar, v.bar.channeling, true)
+	end
+end
+
+-- XPerl_ArcaneBar_KickColours
+-- Refreshes the ready state and repaints active target/focus bars (also the option's click handler)
+function XPerl_ArcaneBar_KickColours()
+	if (conf and conf.castBarKickColour) then
+		XPerl_ArcaneBar_UpdateKickReady()
+	end
+	XPerl_ArcaneBar_KickRepaint()
+end
+
+kickTracker.cooldown:HookScript("OnCooldownDone", function()
+	-- ready without re-querying the cooldown, so red doesn't linger (as BBF)
+	kickTracker.ready = true
+	if (conf and conf.castBarKickColour) then
+		XPerl_ArcaneBar_KickRepaint()
+	end
+end)
+
+for i, event in pairs({"SPELL_UPDATE_COOLDOWN", "SPELL_UPDATE_USABLE", "PLAYER_ENTERING_WORLD", "TRAIT_CONFIG_UPDATED", "PLAYER_TALENT_UPDATE"}) do
+	pcall(kickTracker.RegisterEvent, kickTracker, event)
+end
+kickTracker:RegisterUnitEvent("UNIT_PET", "player")
+kickTracker:SetScript("OnEvent", function(self, event)
+	if (event == "SPELL_UPDATE_COOLDOWN" or event == "SPELL_UPDATE_USABLE") then
+		if (conf and conf.castBarKickColour and XPerl_ArcaneBar_UpdateKickReady()) then
+			XPerl_ArcaneBar_KickRepaint()
+		end
+	else
+		-- spells may not be known on the same frame (pet summon, spec swap)
+		C_Timer.After(0.1, function()
+			kickTracker.spellID = XPerl_ArcaneBar_GetInterruptSpell() or false
+			if (conf and conf.castBarKickColour) then
+				XPerl_ArcaneBar_KickColours()
+			end
+		end)
+	end
+end)
 
 -- enableToggle
 local function enableToggle(self, value)
@@ -244,6 +391,48 @@ local function ActiveCasting(self)
 	end
 end
 
+-- XPerl_ArcaneBar_ShowFailed
+-- Red finish for a failed or interrupted cast/channel
+local function XPerl_ArcaneBar_ShowFailed(self, text)
+	self.spellText:SetText(text)
+	XPerl_ArcaneBar_ClearSecretTimes(self)
+	if (self.channeling and self.endTime) then
+		-- channel range is startTime..endTime, show it full
+		self.tex:SetTexCoord(0, 1, 0, 1)
+		self:SetValue(self.endTime)
+	elseif (self.maxValue) then
+		self:SetValue(self.maxValue)
+	end
+	self:SetStatusBarColor(barColours.failure.r, barColours.failure.g, barColours.failure.b, conf.transparency.frame)
+	self.barSpark:Hide()
+	self.casting = nil
+	self.channeling = nil
+	if (not self.fadeOut) then
+		self.flash = 1
+	end
+	self.fadeOut = 1
+	self.holdTime = GetTime() + (CASTING_BAR_HOLD_TIME or 1)
+end
+
+-- XPerl_ArcaneBar_InterruptText
+-- Z-Perl Forever: "Interrupted by <Name>" when the interrupter can be read (as Blizzard's bar)
+local function XPerl_ArcaneBar_InterruptText(interruptedBy)
+	if (XPerl_CanAccess(interruptedBy) and SPELL_INTERRUPTED_BY and UnitNameFromGUID) then
+		local name = UnitNameFromGUID(interruptedBy)
+		if (XPerl_CanAccess(name) and name ~= "") then
+			if (UnitClassFromGUID) then
+				local _, class = UnitClassFromGUID(interruptedBy)
+				local colour = XPerl_CanAccess(class) and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
+				if (colour and colour.WrapTextInColorCode) then
+					name = colour:WrapTextInColorCode(name)
+				end
+			end
+			return format(SPELL_INTERRUPTED_BY, name)
+		end
+	end
+	return SPELL_FAILED_INTERRUPTED
+end
+
 --------------------------------------------------
 --
 -- Event/Update Handlers
@@ -286,7 +475,7 @@ function XPerl_ArcaneBar_OnEvent(self, event, unit, ...)
 			return
 		end
 
-		self:SetStatusBarColor(barColours.main.r, barColours.main.g, barColours.main.b, conf.transparency.frame)
+		XPerl_ArcaneBar_SetCastColour(self, false)
 		self.spellText:SetText(XPerl_ArcaneBar_SpellName(name))
 		self.castID = castID
 		self.barParentName:Hide()
@@ -311,7 +500,7 @@ function XPerl_ArcaneBar_OnEvent(self, event, unit, ...)
 			self.castTimeText:Hide()
 		end
 	elseif ((event == "UNIT_SPELLCAST_STOP" and self.casting) or (event == "UNIT_SPELLCAST_CHANNEL_STOP" and self.channeling)) then
-		local lineGUID, spellID = ...
+		local lineGUID, spellID, interruptedBy = ...
 		if event == "UNIT_SPELLCAST_STOP" and not XPerl_ArcaneBar_SameCast(self.castID, lineGUID) then
 			return
 		end
@@ -322,7 +511,10 @@ function XPerl_ArcaneBar_OnEvent(self, event, unit, ...)
 			if (not self:IsVisible()) then
 				self:Hide()
 			end
-			if (self:IsShown()) then
+			if (self:IsShown() and event == "UNIT_SPELLCAST_CHANNEL_STOP" and interruptedBy ~= nil) then
+				-- Z-Perl Forever: a kicked channel ends like an interrupted cast
+				XPerl_ArcaneBar_ShowFailed(self, XPerl_ArcaneBar_InterruptText(interruptedBy))
+			elseif (self:IsShown()) then
 				XPerl_ArcaneBar_ClearSecretTimes(self)
 				if (self.maxValue) then
 					self:SetValue(self.maxValue)
@@ -341,30 +533,16 @@ function XPerl_ArcaneBar_OnEvent(self, event, unit, ...)
 			end
 		end
 	elseif (event == "UNIT_SPELLCAST_FAILED" or event == "UNIT_SPELLCAST_INTERRUPTED") then
-		local lineGUID, spellID = ...
+		local lineGUID, spellID, interruptedBy = ...
 		if not XPerl_ArcaneBar_SameCast(self.castID, lineGUID) then
 			return
 		end
 		if (not self.fadeOut and self:IsShown() and not ActiveCasting(self)) then
 			if (event == "UNIT_SPELLCAST_FAILED") then
-				self.spellText:SetText(FAILED)
+				XPerl_ArcaneBar_ShowFailed(self, FAILED)
 			else
-				self.spellText:SetText(SPELL_FAILED_INTERRUPTED)
+				XPerl_ArcaneBar_ShowFailed(self, XPerl_ArcaneBar_InterruptText(interruptedBy))
 			end
-
-			XPerl_ArcaneBar_ClearSecretTimes(self)
-			if (self.maxValue) then
-				self:SetValue(self.maxValue)
-			end
-			self:SetStatusBarColor(barColours.failure.r, barColours.failure.g, barColours.failure.b, conf.transparency.frame)
-			self.barSpark:Hide()
-			self.casting = nil
-			self.channeling = nil
-			if (not self.fadeOut) then
-				self.flash = 1
-			end
-			self.fadeOut = 1
-			self.holdTime = GetTime() + (CASTING_BAR_HOLD_TIME or 1)
 		end
 	elseif (event == "UNIT_SPELLCAST_INTERRUPTIBLE") or (event == "UNIT_SPELLCAST_NOT_INTERRUPTIBLE") then
 		if (self:IsShown()) then
@@ -410,7 +588,7 @@ function XPerl_ArcaneBar_OnEvent(self, event, unit, ...)
 			return
 		end
 
-		self:SetStatusBarColor(barColours.channel.r, barColours.channel.g, barColours.channel.b, conf.transparency.frame)
+		XPerl_ArcaneBar_SetCastColour(self, true)
 		self.barSpark:Show()
 		self.barParentName:Hide()
 		self.spellText:SetText(XPerl_ArcaneBar_SpellName(name))

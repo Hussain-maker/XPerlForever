@@ -4841,6 +4841,24 @@
 						</Scripts>
 					</CheckButton>
 
+					<CheckButton name="$parent_CastKickColour" inherits="XPerlCheckButtonTemplate">
+						<Anchors>
+							<Anchor point="TOPLEFT" relativeTo="$parent_NoCastFlash" relativePoint="BOTTOMLEFT">
+								<Offset>
+									<AbsDimension x="0" y="6"/>
+								</Offset>
+							</Anchor>
+						</Anchors>
+						<Scripts>
+							<OnLoad>
+								XPerl_OptionsSetMyText(self, "XPERL_CONF_KICKCOLOUR")
+								self.configBase = "XPerlDB"
+								self.configIndex = "castBarKickColour"
+								self.configClick = XPerl_ArcaneBar_KickColours
+							</OnLoad>
+						</Scripts>
+					</CheckButton>
+
 					<CheckButton name="$parent_SettingsMethod" inherits="XPerlCheckButtonTemplate">
 						<Anchors>
 							<Anchor point="TOPLEFT" relativePoint="BOTTOMRIGHT">
