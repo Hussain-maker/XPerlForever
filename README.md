@@ -182,6 +182,12 @@ the bar finished green on the following STOP instead of showing "Interrupted". W
 readable and matches the bar's cast, it is now trusted (as Blizzard's bar does); the time check remains the
 fallback for channels and unreadable IDs.
 
+### 17. Option "Hide Server Names" (option, off by default)
+`XPerlForever.lua` (`XPerl_UnitFullName`), options (xml + localization) – **+24**
+
+On retail `UnitName`'s second return is the server name, so players from other servers show as
+"Name Server" on target, focus, party and target-of-target frames. The new Global option shows the name only.
+
 ## Totals
 
 | Change | Files | Lines |
@@ -202,5 +208,6 @@ fallback for channels and unreadable IDs.
 | 14. No Cast Bar Flash option | ArcaneBar, Options | +28 / −4 |
 | 15. Interrupt colours, kicked channels, "Interrupted by" | ArcaneBar, Options | +220 / −22 |
 | 16. Early-interrupted own casts | ArcaneBar | +4 / −1 |
+| 17. Hide Server Names option | XPerlForever.lua, Options | +24 |
 
 Thanks for keeping X-Perl alive!

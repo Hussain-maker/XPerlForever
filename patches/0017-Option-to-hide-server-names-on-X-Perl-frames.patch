@@ -1,0 +1,72 @@
+From 529100421647c43ade79e710a885e9d057ca5cd0 Mon Sep 17 00:00:00 2001
+From: Hussain-maker <79055482+Hussain-maker@users.noreply.github.com>
+Date: Sun, 27 Sep 2026 12:14:14 +0100
+Subject: [PATCH] Option to hide server names on X-Perl frames
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ XPerlForever/XPerlForever.lua                  |  4 ++++
+ .../XPerlForever_FrameOptions.xml              | 18 ++++++++++++++++++
+ XPerlForever_Options/localization.lua          |  2 ++
+ 3 files changed, 24 insertions(+)
+
+diff --git a/XPerlForever/XPerlForever.lua b/XPerlForever/XPerlForever.lua
+index 86c4696..2b99874 100644
+--- a/XPerlForever/XPerlForever.lua
++++ b/XPerlForever/XPerlForever.lua
+@@ -549,6 +549,10 @@ end
+ -- convention is live. See CLAUDE.md pattern 14.
+ function XPerl_UnitFullName(unit)
+ 	local n, s = UnitName(unit)
++	-- On retail the second return is the server name: "Hide Server Names" drops it
++	if (XPerlDB and XPerlDB.hideRealm) then
++		return n
++	end
+ 	if (s and XPerl_CanAccess(s) and XPerl_CanAccess(n) and s ~= "") then
+ 		return n.." "..s
+ 	end
+diff --git a/XPerlForever_Options/XPerlForever_FrameOptions.xml b/XPerlForever_Options/XPerlForever_FrameOptions.xml
+index ea70b27..7a5e2e9 100644
+--- a/XPerlForever_Options/XPerlForever_FrameOptions.xml
++++ b/XPerlForever_Options/XPerlForever_FrameOptions.xml
+@@ -4859,6 +4859,24 @@
+ 						</Scripts>
+ 					</CheckButton>
+ 
++					<CheckButton name="$parent_HideRealm" inherits="XPerlCheckButtonTemplate">
++						<Anchors>
++							<Anchor point="TOPLEFT" relativeTo="$parent_CastKickColour" relativePoint="BOTTOMLEFT">
++								<Offset>
++									<AbsDimension x="0" y="6"/>
++								</Offset>
++							</Anchor>
++						</Anchors>
++						<Scripts>
++							<OnLoad>
++								XPerl_OptionsSetMyText(self, "XPERL_CONF_HIDEREALM")
++								self.configBase = "XPerlDB"
++								self.configIndex = "hideRealm"
++								self.configClick = XPerl_OptionActions
++							</OnLoad>
++						</Scripts>
++					</CheckButton>
++
+ 					<CheckButton name="$parent_SettingsMethod" inherits="XPerlCheckButtonTemplate">
+ 						<Anchors>
+ 							<Anchor point="TOPLEFT" relativePoint="BOTTOMRIGHT">
+diff --git a/XPerlForever_Options/localization.lua b/XPerlForever_Options/localization.lua
+index cbb71ed..f06c729 100644
+--- a/XPerlForever_Options/localization.lua
++++ b/XPerlForever_Options/localization.lua
+@@ -209,6 +209,8 @@ XPERL_CONF_NOCASTFLASH				= "No Cast Bar Flash"
+ XPERL_CONF_NOCASTFLASH_DESC			= "Don't flash X-Perl's cast bars when a cast finishes (all frames)."
+ XPERL_CONF_KICKCOLOUR				= "Interrupt Colours"
+ XPERL_CONF_KICKCOLOUR_DESC			= "Colour enemy target and focus cast bars red while your interrupt is on cooldown."
++XPERL_CONF_HIDEREALM				= "Hide Server Names"
++XPERL_CONF_HIDEREALM_DESC			= "Show players from other servers by name only on X-Perl frames."
+ XPERL_CONF_BUFFTOOLTIPS					= "Buff Tooltips"
+ XPERL_CONF_BUFFTOOLTIPS_DESC			= "Enable tooltips for buffs and debuffs."
+ XPERL_CONF_UNITTOOLTIPS					= "Unit Tooltips"
+-- 
+2.48.1.windows.1
+
