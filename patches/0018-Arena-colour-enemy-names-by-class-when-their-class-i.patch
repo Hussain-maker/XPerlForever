@@ -1,0 +1,75 @@
+From 228316e09e0aa8a8c8641ca83d892543865f2388 Mon Sep 17 00:00:00 2001
+From: Hussain-maker <79055482+Hussain-maker@users.noreply.github.com>
+Date: Sun, 27 Sep 2026 13:28:18 +0100
+Subject: [PATCH] Arena: colour enemy names by class when their class is hidden
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ XPerlForever/XPerlForever.lua               | 25 ++++++++++++++-------
+ XPerlForever_Target/XPerlForever_Target.lua |  2 +-
+ 2 files changed, 18 insertions(+), 9 deletions(-)
+
+diff --git a/XPerlForever/XPerlForever.lua b/XPerlForever/XPerlForever.lua
+index 2b99874..53a4f81 100644
+--- a/XPerlForever/XPerlForever.lua
++++ b/XPerlForever/XPerlForever.lua
+@@ -1831,14 +1831,22 @@ function XPerl_UnitClassFile(unit)
+ 	if (XPerl_CanAccess(class)) then
+ 		return class
+ 	end
++	local i = XPerl_ArenaOpponentIndex(unit)
++	if (i) then
++		local specID = GetArenaOpponentSpec and GetArenaOpponentSpec(i)
++		if (XPerl_CanAccess(specID) and specID and specID > 0) then
++			return (select(6, GetSpecializationInfoByID(specID)))
++		end
++	end
++end
++
++-- XPerl_ArenaOpponentIndex(unit)
++-- 1-5 if the unit is that arena opponent (UnitIsUnit with arenaN is not secret), else nil
++function XPerl_ArenaOpponentIndex(unit)
+ 	for i = 1, 5 do
+ 		local isOpponent = UnitIsUnit(unit, "arena"..i)
+ 		if (XPerl_CanAccess(isOpponent) and isOpponent) then
+-			local specID = GetArenaOpponentSpec and GetArenaOpponentSpec(i)
+-			if (XPerl_CanAccess(specID) and specID and specID > 0) then
+-				return (select(6, GetSpecializationInfoByID(specID)))
+-			end
+-			return
++			return i
+ 		end
+ 	end
+ end
+@@ -2391,11 +2399,12 @@ end
+ -- XPerl_SetUnitNameColor
+ function XPerl_SetUnitNameColor(self, unit)
+ 	local color
+-	if (XPerl_SafeBool(UnitIsPlayer(unit), false) or not XPerl_SafeBool(UnitIsVisible(unit), true)) then -- Changed UnitPlayerControlled to UnitIsPlayer for 2.3.5
++	-- Z-Perl Forever: in arena an enemy's player flag and class can be secret; arena opponents
++	-- are players and XPerl_UnitClassFile takes their class from their spec
++	if (XPerl_SafeBool(UnitIsPlayer(unit), false) or XPerl_ArenaOpponentIndex(unit) or not XPerl_SafeBool(UnitIsVisible(unit), true)) then -- Changed UnitPlayerControlled to UnitIsPlayer for 2.3.5
+ 		-- 1.8.3 - Changed to override pvp name colours
+ 		if (conf.colour.class) then
+-			local _, class = UnitClass(unit)
+-			color = XPerl_GetClassColour(class)
++			color = XPerl_GetClassColour(XPerl_UnitClassFile(unit))
+ 		else
+ 			color = XPerl_ReactionColour(unit)
+ 		end
+diff --git a/XPerlForever_Target/XPerlForever_Target.lua b/XPerlForever_Target/XPerlForever_Target.lua
+index 6093e1a..3f3b631 100644
+--- a/XPerlForever_Target/XPerlForever_Target.lua
++++ b/XPerlForever_Target/XPerlForever_Target.lua
+@@ -683,7 +683,7 @@ local function XPerl_Target_UpdatePVP(self)
+ 		local c = XPerl_ReactionColour(partyid)
+ 		self.nameFrame:SetBackdropColor(c.r, c.g, c.b)
+ 
+-		if (conf.colour.class and UnitPlayerControlled(partyid)) then
++		if (conf.colour.class and XPerl_SafeBool(UnitPlayerControlled(partyid), false)) then
+ 			XPerl_SetUnitNameColor(self.nameFrame.text, partyid)
+ 		else
+ 			self.nameFrame.text:SetTextColor(1, 1, 1, conf.transparency.text)
+-- 
+2.48.1.windows.1
+

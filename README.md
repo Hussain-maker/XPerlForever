@@ -188,6 +188,15 @@ fallback for channels and unreadable IDs.
 On retail `UnitName`'s second return is the server name, so players from other servers show as
 "Name Server" on target, focus, party and target-of-target frames. The new Global option shows the name only.
 
+### 18. Arena enemy names in class colour (bug fix, same cause as change 8)
+`XPerlForever.lua` (`XPerl_SetUnitNameColor`, new `XPerl_ArenaOpponentIndex`), `XPerlForever_Target` – **+18 / −9**
+
+In arena an enemy's class (and sometimes whether it is a player) is secret, so `XPerl_SetUnitNameColor` fell
+back to the default or reaction colour. Arena opponents now count as players and their class comes from
+`XPerl_UnitClassFile` (arena opponent spec), the same helper the class icon uses. The arena lookup moved into
+`XPerl_ArenaOpponentIndex(unit)`, shared by both. The target's reaction-highlight path also tested
+`UnitPlayerControlled` directly; it now goes through `XPerl_SafeBool`.
+
 ## Totals
 
 | Change | Files | Lines |
@@ -209,5 +218,6 @@ On retail `UnitName`'s second return is the server name, so players from other s
 | 15. Interrupt colours, kicked channels, "Interrupted by" | ArcaneBar, Options | +220 / −22 |
 | 16. Early-interrupted own casts | ArcaneBar | +4 / −1 |
 | 17. Hide Server Names option | XPerlForever.lua, Options | +24 |
+| 18. Arena enemy name colours | XPerlForever.lua, Target | +18 / −9 |
 
 Thanks for keeping X-Perl alive!
