@@ -549,6 +549,10 @@ end
 -- convention is live. See CLAUDE.md pattern 14.
 function XPerl_UnitFullName(unit)
 	local n, s = UnitName(unit)
+	-- On retail the second return is the server name: "Hide Server Names" drops it
+	if (XPerlDB and XPerlDB.hideRealm) then
+		return n
+	end
 	if (s and XPerl_CanAccess(s) and XPerl_CanAccess(n) and s ~= "") then
 		return n.." "..s
 	end
