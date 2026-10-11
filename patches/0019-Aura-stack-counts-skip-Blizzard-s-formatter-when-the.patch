@@ -1,0 +1,65 @@
+From 64b26376dde8400fd150b23fde3c5c408856a811 Mon Sep 17 00:00:00 2001
+From: Hussain-maker <79055482+Hussain-maker@users.noreply.github.com>
+Date: Sun, 11 Oct 2026 19:08:59 +0100
+Subject: [PATCH] Aura stack counts: skip Blizzard's formatter when the aura
+ instance is secret
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ XPerlForever/XPerlForever.lua                         | 11 ++++++-----
+ XPerlForever_PlayerBuffs/XPerlForever_PlayerBuffs.lua |  4 ++--
+ 2 files changed, 8 insertions(+), 7 deletions(-)
+
+diff --git a/XPerlForever/XPerlForever.lua b/XPerlForever/XPerlForever.lua
+index 53a4f81..9455c04 100644
+--- a/XPerlForever/XPerlForever.lua
++++ b/XPerlForever/XPerlForever.lua
+@@ -3824,11 +3824,12 @@ function XPerl_Unit_UpdateBuffs(self, maxBuffs, maxDebuffs, castableOnly, curabl
+ 						buffs = buffs + 1
+ 
+ 						button.icon:SetTexture(icon)
+-						if (XPerl_IsSecret(count)) then
+-							-- Z-Perl Forever: Blizzard formats the stack count
++						if (XPerl_IsSecret(count) and XPerl_CanAccess(auraInstanceID)) then
++							-- Z-Perl Forever: Blizzard formats the stack count; it rejects a
++							-- secret auraInstanceID from addon code, so that case shows no count
+ 							button.count:SetText(C_UnitAuras.GetAuraApplicationDisplayCount(partyid, auraInstanceID, 2))
+ 							button.count:Show()
+-						elseif (count > 1) then
++						elseif (XPerl_CanAccess(count) and count > 1) then
+ 							button.count:SetText(count)
+ 							button.count:Show()
+ 						else
+@@ -3963,10 +3964,10 @@ function XPerl_Unit_UpdateBuffs(self, maxBuffs, maxDebuffs, castableOnly, curabl
+ 						debuffs = debuffs + 1
+ 
+ 						button.icon:SetTexture(icon)
+-						if (XPerl_IsSecret(count)) then
++						if (XPerl_IsSecret(count) and XPerl_CanAccess(auraInstanceID)) then
+ 							button.count:SetText(C_UnitAuras.GetAuraApplicationDisplayCount(partyid, auraInstanceID, 2))
+ 							button.count:Show()
+-						elseif ((count or 0) > 1) then
++						elseif (XPerl_CanAccess(count) and count > 1) then
+ 							button.count:SetText(count)
+ 							button.count:Show()
+ 						else
+diff --git a/XPerlForever_PlayerBuffs/XPerlForever_PlayerBuffs.lua b/XPerlForever_PlayerBuffs/XPerlForever_PlayerBuffs.lua
+index 31a4af5..cc34194 100644
+--- a/XPerlForever_PlayerBuffs/XPerlForever_PlayerBuffs.lua
++++ b/XPerlForever_PlayerBuffs/XPerlForever_PlayerBuffs.lua
+@@ -510,10 +510,10 @@ function XPerl_PlayerBuffs_Update(self)
+ 			end
+ 
+ 			self.icon:SetTexture(icon)
+-			if (XPerl_IsSecret(applications)) then
++			if (XPerl_IsSecret(applications) and XPerl_CanAccess(auraInstanceID)) then
+ 				self.count:SetText(C_UnitAuras.GetAuraApplicationDisplayCount(unit, auraInstanceID, 2))
+ 				self.count:Show()
+-			elseif (applications or 0) > 1 then
++			elseif (XPerl_CanAccess(applications) and applications > 1) then
+ 				self.count:SetText(applications)
+ 				self.count:Show()
+ 			else
+-- 
+2.48.1.windows.1
+

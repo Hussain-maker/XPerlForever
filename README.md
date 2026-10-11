@@ -197,6 +197,15 @@ back to the default or reaction colour. Arena opponents now count as players and
 `XPerl_ArenaOpponentIndex(unit)`, shared by both. The target's reaction-highlight path also tested
 `UnitPlayerControlled` directly; it now goes through `XPerl_SafeBool`.
 
+### 19. Aura stack counts: error when the aura instance is secret (bug fix)
+`XPerlForever.lua` (`XPerl_Unit_UpdateBuffs`, buffs and debuffs), `XPerlForever_PlayerBuffs` – **+8 / −7**
+
+When a stack count is secret, X-Perl asks `C_UnitAuras.GetAuraApplicationDisplayCount` to format it. On some
+hostile targets the `auraInstanceID` is secret as well, and that function does not accept secret arguments from
+addon code ("bad argument #1"), which aborted the buff update part-way. The call is now only made when the
+`auraInstanceID` is readable; otherwise that icon shows no stack count. The non-secret branch also checks the
+count is readable before comparing it.
+
 ## Totals
 
 | Change | Files | Lines |
@@ -219,5 +228,6 @@ back to the default or reaction colour. Arena opponents now count as players and
 | 16. Early-interrupted own casts | ArcaneBar | +4 / −1 |
 | 17. Hide Server Names option | XPerlForever.lua, Options | +24 |
 | 18. Arena enemy name colours | XPerlForever.lua, Target | +18 / −9 |
+| 19. Secret aura instance stack counts | XPerlForever.lua, PlayerBuffs | +8 / −7 |
 
 Thanks for keeping X-Perl alive!
