@@ -3824,11 +3824,12 @@ function XPerl_Unit_UpdateBuffs(self, maxBuffs, maxDebuffs, castableOnly, curabl
 						buffs = buffs + 1
 
 						button.icon:SetTexture(icon)
-						if (XPerl_IsSecret(count)) then
-							-- Z-Perl Forever: Blizzard formats the stack count
+						if (XPerl_IsSecret(count) and XPerl_CanAccess(auraInstanceID)) then
+							-- Z-Perl Forever: Blizzard formats the stack count; it rejects a
+							-- secret auraInstanceID from addon code, so that case shows no count
 							button.count:SetText(C_UnitAuras.GetAuraApplicationDisplayCount(partyid, auraInstanceID, 2))
 							button.count:Show()
-						elseif (count > 1) then
+						elseif (XPerl_CanAccess(count) and count > 1) then
 							button.count:SetText(count)
 							button.count:Show()
 						else
@@ -3963,10 +3964,10 @@ function XPerl_Unit_UpdateBuffs(self, maxBuffs, maxDebuffs, castableOnly, curabl
 						debuffs = debuffs + 1
 
 						button.icon:SetTexture(icon)
-						if (XPerl_IsSecret(count)) then
+						if (XPerl_IsSecret(count) and XPerl_CanAccess(auraInstanceID)) then
 							button.count:SetText(C_UnitAuras.GetAuraApplicationDisplayCount(partyid, auraInstanceID, 2))
 							button.count:Show()
-						elseif ((count or 0) > 1) then
+						elseif (XPerl_CanAccess(count) and count > 1) then
 							button.count:SetText(count)
 							button.count:Show()
 						else

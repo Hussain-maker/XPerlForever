@@ -510,10 +510,10 @@ function XPerl_PlayerBuffs_Update(self)
 			end
 
 			self.icon:SetTexture(icon)
-			if (XPerl_IsSecret(applications)) then
+			if (XPerl_IsSecret(applications) and XPerl_CanAccess(auraInstanceID)) then
 				self.count:SetText(C_UnitAuras.GetAuraApplicationDisplayCount(unit, auraInstanceID, 2))
 				self.count:Show()
-			elseif (applications or 0) > 1 then
+			elseif (XPerl_CanAccess(applications) and applications > 1) then
 				self.count:SetText(applications)
 				self.count:Show()
 			else
