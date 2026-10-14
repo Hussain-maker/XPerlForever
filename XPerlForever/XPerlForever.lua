@@ -1841,6 +1841,22 @@ function XPerl_UnitClassFile(unit)
 	end
 end
 
+-- XPerl_UnitClassToken(unit)
+-- Like XPerl_UnitClassFile, but may return the class secret: since 12.1.5 an arena
+-- enemy's spec is secret too, so their class can't be read, only handed on to
+-- game functions that accept it. nil when the game gives no class at all.
+function XPerl_UnitClassToken(unit)
+	local class = XPerl_UnitClassFile(unit)
+	if (class) then
+		return class
+	end
+	class = UnitClassBase(unit)
+	if (class == nil) then
+		class = select(2, UnitClass(unit))
+	end
+	return class
+end
+
 -- XPerl_ArenaOpponentIndex(unit)
 -- 1-5 if the unit is that arena opponent (UnitIsUnit with arenaN is not secret), else nil
 function XPerl_ArenaOpponentIndex(unit)
@@ -1856,6 +1872,10 @@ end
 -- Round class icon in a portrait texture (SetPortraitToTexture no longer exists).
 -- Returns false for an unknown class.
 function XPerl_SetClassPortrait(texture, class)
+	if (XPerl_IsSecret(class)) then
+		-- Hidden class (arena): only the atlas lookup accepts it, so the square icon is used
+		return (GetClassAtlas and pcall(texture.SetAtlas, texture, GetClassAtlas(class))) or false
+	end
 	local coords = class and CLASS_ICON_TCOORDS[class]
 	if (not coords) then
 		return false
@@ -2405,7 +2425,13 @@ function XPerl_SetUnitNameColor(self, unit)
 	if (XPerl_SafeBool(UnitIsPlayer(unit), false) or XPerl_ArenaOpponentIndex(unit) or not XPerl_SafeBool(UnitIsVisible(unit), true)) then -- Changed UnitPlayerControlled to UnitIsPlayer for 2.3.5
 		-- 1.8.3 - Changed to override pvp name colours
 		if (conf.colour.class) then
-			color = XPerl_GetClassColour(XPerl_UnitClassFile(unit))
+			local class = XPerl_UnitClassToken(unit)
+			if (XPerl_IsSecret(class) and C_ClassColor and C_ClassColor.GetClassColor) then
+				-- Hidden class (arena): the game looks up its colour
+				color = C_ClassColor.GetClassColor(class) or XPerl_GetClassColour(nil)
+			else
+				color = XPerl_GetClassColour(class)
+			end
 		else
 			color = XPerl_ReactionColour(unit)
 		end
@@ -4244,13 +4270,13 @@ function XPerl_Unit_UpdatePortrait(self, force)
 			-- usually still means it drew one)
 			local texture = portrait:GetTexture()
 			if (XPerl_CanAccess(texture) and not texture) then
-				XPerl_SetClassPortrait(portrait, XPerl_UnitClassFile(self.partyid))
+				XPerl_SetClassPortrait(portrait, XPerl_UnitClassToken(self.partyid))
 			end
 			portrait:Show()
 			return
 		end
 		local portrait = self.portraitFrame.portrait
-		if not (self.conf.classPortrait and XPerl_SafeBool(UnitIsPlayer(self.partyid), false) and XPerl_SetClassPortrait(portrait, XPerl_UnitClassFile(self.partyid))) then
+		if not (self.conf.classPortrait and XPerl_SafeBool(UnitIsPlayer(self.partyid), false) and XPerl_SetClassPortrait(portrait, XPerl_UnitClassToken(self.partyid))) then
 			portrait:SetTexCoord(0, 1, 0, 1)
 			SetPortraitTexture(portrait, self.partyid)
 		end

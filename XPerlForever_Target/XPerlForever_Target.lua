@@ -1015,15 +1015,12 @@ local function XPerl_Target_UpdateType(self)
 			else
 				if (UnitIsPlayer(partyid) or not UnitPlayerControlled(partyid)) then
 					local tex = self.typeFramePlayer.classTexture
-					if (not XPerl_CanAccess(LocalClass)) then
-						-- Class hidden (enemies in arena): take it from the arena opponent's spec
-						LocalClass = XPerl_UnitClassFile(partyid) or LocalClass
-					end
+					LocalClass = XPerl_UnitClassToken(partyid)
 					if (XPerl_CanAccess(LocalClass)) then
 						tex:SetTexture("Interface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes")
 						tex:SetTexCoord(XPerl_ClassPos(LocalClass))
 						self.typeFramePlayer:Show()
-					elseif (GetClassAtlas and pcall(tex.SetAtlas, tex, GetClassAtlas(LocalClass))) then
+					elseif (XPerl_IsSecret(LocalClass) and GetClassAtlas and pcall(tex.SetAtlas, tex, GetClassAtlas(LocalClass))) then
 						-- Class hidden (enemies in arena): the game resolves the icon itself
 						self.typeFramePlayer:Show()
 					else
