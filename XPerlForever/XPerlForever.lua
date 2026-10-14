@@ -287,8 +287,9 @@ end
 -- XPerl_CooldownFrame_SetAura(cooldown, unit, auraInstanceID)
 -- Drives an aura cooldown swipe from a Blizzard duration object when the aura
 -- times are secret. Blizzard draws the countdown numbers in that case.
+-- C_UnitAuras rejects a secret auraInstanceID from addon code: no swipe then.
 function XPerl_CooldownFrame_SetAura(self, unit, auraInstanceID)
-	if (not (C_UnitAuras and C_UnitAuras.GetAuraDuration and self.SetCooldownFromDurationObject) or auraInstanceID == nil) then
+	if (not (C_UnitAuras and C_UnitAuras.GetAuraDuration and self.SetCooldownFromDurationObject) or not XPerl_CanAccess(auraInstanceID)) then
 		self:Hide()
 		return false
 	end
@@ -3974,7 +3975,7 @@ function XPerl_Unit_UpdateBuffs(self, maxBuffs, maxDebuffs, castableOnly, curabl
 							button.count:Hide()
 						end
 
-						if (XPerl_IsSecret(debuffType) and C_UnitAuras.GetAuraDispelTypeColor and XPerl_DispelColourCurve()) then
+						if (XPerl_IsSecret(debuffType) and XPerl_CanAccess(auraInstanceID) and C_UnitAuras.GetAuraDispelTypeColor and XPerl_DispelColourCurve()) then
 							-- Z-Perl Forever: Blizzard resolves the dispel colour from the curve
 							local c = C_UnitAuras.GetAuraDispelTypeColor(partyid, auraInstanceID, XPerl_DispelColourCurve())
 							if (c) then

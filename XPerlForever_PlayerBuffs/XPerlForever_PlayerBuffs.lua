@@ -495,7 +495,7 @@ function XPerl_PlayerBuffs_Update(self)
 
 			if name and filter == "HARMFUL" then
 				self.border:Show()
-				if (XPerl_IsSecret(dispelName) and C_UnitAuras and C_UnitAuras.GetAuraDispelTypeColor and XPerl_DispelColourCurve()) then
+				if (XPerl_IsSecret(dispelName) and XPerl_CanAccess(auraInstanceID) and C_UnitAuras and C_UnitAuras.GetAuraDispelTypeColor and XPerl_DispelColourCurve()) then
 					-- Z-Perl Forever: Blizzard resolves the dispel colour from the curve
 					local c = C_UnitAuras.GetAuraDispelTypeColor(unit, auraInstanceID, XPerl_DispelColourCurve())
 					if (c) then
