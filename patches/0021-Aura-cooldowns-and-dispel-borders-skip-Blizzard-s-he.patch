@@ -1,0 +1,52 @@
+From a0d0caa934dad9b0ed45356b8f9558e39e2298c1 Mon Sep 17 00:00:00 2001
+From: Hussain-maker <79055482+Hussain-maker@users.noreply.github.com>
+Date: Wed, 14 Oct 2026 09:34:34 +0100
+Subject: [PATCH 21/22] Aura cooldowns and dispel borders: skip Blizzard's
+ helpers when the aura instance is secret
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ XPerlForever/XPerlForever.lua                         | 5 +++--
+ XPerlForever_PlayerBuffs/XPerlForever_PlayerBuffs.lua | 2 +-
+ 2 files changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/XPerlForever/XPerlForever.lua b/XPerlForever/XPerlForever.lua
+index 9455c04..59a2341 100644
+--- a/XPerlForever/XPerlForever.lua
++++ b/XPerlForever/XPerlForever.lua
+@@ -287,8 +287,9 @@ end
+ -- XPerl_CooldownFrame_SetAura(cooldown, unit, auraInstanceID)
+ -- Drives an aura cooldown swipe from a Blizzard duration object when the aura
+ -- times are secret. Blizzard draws the countdown numbers in that case.
++-- C_UnitAuras rejects a secret auraInstanceID from addon code: no swipe then.
+ function XPerl_CooldownFrame_SetAura(self, unit, auraInstanceID)
+-	if (not (C_UnitAuras and C_UnitAuras.GetAuraDuration and self.SetCooldownFromDurationObject) or auraInstanceID == nil) then
++	if (not (C_UnitAuras and C_UnitAuras.GetAuraDuration and self.SetCooldownFromDurationObject) or not XPerl_CanAccess(auraInstanceID)) then
+ 		self:Hide()
+ 		return false
+ 	end
+@@ -3974,7 +3975,7 @@ function XPerl_Unit_UpdateBuffs(self, maxBuffs, maxDebuffs, castableOnly, curabl
+ 							button.count:Hide()
+ 						end
+ 
+-						if (XPerl_IsSecret(debuffType) and C_UnitAuras.GetAuraDispelTypeColor and XPerl_DispelColourCurve()) then
++						if (XPerl_IsSecret(debuffType) and XPerl_CanAccess(auraInstanceID) and C_UnitAuras.GetAuraDispelTypeColor and XPerl_DispelColourCurve()) then
+ 							-- Z-Perl Forever: Blizzard resolves the dispel colour from the curve
+ 							local c = C_UnitAuras.GetAuraDispelTypeColor(partyid, auraInstanceID, XPerl_DispelColourCurve())
+ 							if (c) then
+diff --git a/XPerlForever_PlayerBuffs/XPerlForever_PlayerBuffs.lua b/XPerlForever_PlayerBuffs/XPerlForever_PlayerBuffs.lua
+index cc34194..872c1b7 100644
+--- a/XPerlForever_PlayerBuffs/XPerlForever_PlayerBuffs.lua
++++ b/XPerlForever_PlayerBuffs/XPerlForever_PlayerBuffs.lua
+@@ -495,7 +495,7 @@ function XPerl_PlayerBuffs_Update(self)
+ 
+ 			if name and filter == "HARMFUL" then
+ 				self.border:Show()
+-				if (XPerl_IsSecret(dispelName) and C_UnitAuras and C_UnitAuras.GetAuraDispelTypeColor and XPerl_DispelColourCurve()) then
++				if (XPerl_IsSecret(dispelName) and XPerl_CanAccess(auraInstanceID) and C_UnitAuras and C_UnitAuras.GetAuraDispelTypeColor and XPerl_DispelColourCurve()) then
+ 					-- Z-Perl Forever: Blizzard resolves the dispel colour from the curve
+ 					local c = C_UnitAuras.GetAuraDispelTypeColor(unit, auraInstanceID, XPerl_DispelColourCurve())
+ 					if (c) then
+-- 
+2.48.1.windows.1
+

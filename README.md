@@ -1,7 +1,7 @@
 # X-Perl Forever 1.0.2 – Midnight fixes, arena improvements and an optional Buff Blacklist module
 
 Hi! These are fixes, arena/combat improvements and one new optional module for X-Perl Forever 1.0.2,
-made while using it on retail (Midnight, 12.0.x), mostly in arena. They're offered for you to merge or adapt however you like – everything is
+made while using it on retail (Midnight, 12.0.x and 12.1.x), mostly in arena. They're offered for you to merge or adapt however you like – everything is
 GPLv3 like the addon.
 
 Everything was tested in game on retail with BugGrabber running (no Lua errors). Each change is a
@@ -206,6 +206,28 @@ addon code ("bad argument #1"), which aborted the buff update part-way. The call
 `auraInstanceID` is readable; otherwise that icon shows no stack count. The non-secret branch also checks the
 count is readable before comparing it.
 
+### 20. Interface version for 12.1.5
+All 17 `.toc` files – **+17 / −17**
+
+Adds `120105` to the `## Interface` list so the game no longer flags X-Perl as out of date on 12.1.5.
+
+### 21. Aura cooldowns and dispel borders: same secret-instance error as change 19 (bug fix)
+`XPerlForever.lua` (`XPerl_CooldownFrame_SetAura`, debuff borders), `XPerlForever_PlayerBuffs` – **+4 / −3**
+
+`C_UnitAuras.GetAuraDuration` (cooldown swipe for secret aura times) and `C_UnitAuras.GetAuraDispelTypeColor`
+(debuff border colour) were also called with a secret `auraInstanceID`, which they reject from addon code. They
+are now skipped in that case: no swipe, and the border uses the default colour.
+
+### 22. Arena: class colours, icons and portraits when the class is secret (fix for 12.1.5)
+`XPerlForever.lua` (new `XPerl_UnitClassToken`, `XPerl_SetUnitNameColor`, `XPerl_SetClassPortrait`), `XPerlForever_Target` – **+31 / −8**
+
+12.1.5 made `GetArenaOpponentSpec` secret, so changes 8, 12 and 18 could no longer work out an arena enemy's
+class and fell back to no colour or icon. The class is still secret, but the game accepts it in some functions.
+`XPerl_UnitClassToken(unit)` returns the class even when secret (`UnitClassBase`, falling back to `UnitClass`).
+With a secret class the name colour comes from `C_ClassColor.GetClassColor`, the target class icon from
+`GetClassAtlas` + `SetAtlas`, and the class-portrait fallback uses the same atlas (the square icon). With no class
+at all the icon is hidden, which also fixes a `GetClassAtlas` "bad argument" error on the target frame.
+
 ## Totals
 
 | Change | Files | Lines |
@@ -229,5 +251,8 @@ count is readable before comparing it.
 | 17. Hide Server Names option | XPerlForever.lua, Options | +24 |
 | 18. Arena enemy name colours | XPerlForever.lua, Target | +18 / −9 |
 | 19. Secret aura instance stack counts | XPerlForever.lua, PlayerBuffs | +8 / −7 |
+| 20. Interface 120105 (12.1.5) | all .toc files | +17 / −17 |
+| 21. Secret aura instance cooldowns and borders | XPerlForever.lua, PlayerBuffs | +4 / −3 |
+| 22. Arena class display with a secret class | XPerlForever.lua, Target | +31 / −8 |
 
 Thanks for keeping X-Perl alive!

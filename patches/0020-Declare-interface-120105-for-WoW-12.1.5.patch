@@ -1,0 +1,199 @@
+From cb96686807e8827e1f86885d07f0a4d0bfbd4b18 Mon Sep 17 00:00:00 2001
+From: Hussain-maker <79055482+Hussain-maker@users.noreply.github.com>
+Date: Wed, 14 Oct 2026 09:34:34 +0100
+Subject: [PATCH 20/22] Declare interface 120105 for WoW 12.1.5
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ XPerlForever/XPerlForever.toc                                 | 2 +-
+ XPerlForever_ArcaneBar/XPerlForever_ArcaneBar.toc             | 2 +-
+ XPerlForever_AuraBlacklist/XPerlForever_AuraBlacklist.toc     | 2 +-
+ XPerlForever_CustomHighlight/XPerlForever_CustomHighlight.toc | 2 +-
+ XPerlForever_Options/XPerlForever_Options.toc                 | 2 +-
+ XPerlForever_Party/XPerlForever_Party.toc                     | 2 +-
+ XPerlForever_PartyPet/XPerlForever_PartyPet.toc               | 2 +-
+ XPerlForever_Player/XPerlForever_Player.toc                   | 2 +-
+ XPerlForever_PlayerBuffs/XPerlForever_PlayerBuffs.toc         | 2 +-
+ XPerlForever_PlayerPet/XPerlForever_PlayerPet.toc             | 2 +-
+ XPerlForever_RaidAdmin/XPerlForever_RaidAdmin.toc             | 2 +-
+ XPerlForever_RaidFrames/XPerlForever_RaidFrames.toc           | 2 +-
+ XPerlForever_RaidHelper/XPerlForever_RaidHelper.toc           | 2 +-
+ XPerlForever_RaidMonitor/XPerlForever_RaidMonitor.toc         | 2 +-
+ XPerlForever_RaidPets/XPerlForever_RaidPets.toc               | 2 +-
+ XPerlForever_Target/XPerlForever_Target.toc                   | 2 +-
+ XPerlForever_TargetTarget/XPerlForever_TargetTarget.toc       | 2 +-
+ 17 files changed, 17 insertions(+), 17 deletions(-)
+
+diff --git a/XPerlForever/XPerlForever.toc b/XPerlForever/XPerlForever.toc
+index 4b0f01a..778e12f 100644
+--- a/XPerlForever/XPerlForever.toc
++++ b/XPerlForever/XPerlForever.toc
+@@ -1,4 +1,4 @@
+-## Interface: 120005, 120007, 120100, 16001, 20505, 20506, 11507, 11508
++## Interface: 120005, 120007, 120100, 120105, 16001, 20505, 20506, 11507, 11508
+ ## Version: 1.0.2
+ ## X-Upstream-Version: Z-Perl Forever 8.0.0
+ ## Author: Ziliya; based on work by Resike and Halfdays
+diff --git a/XPerlForever_ArcaneBar/XPerlForever_ArcaneBar.toc b/XPerlForever_ArcaneBar/XPerlForever_ArcaneBar.toc
+index 40d7b6a..54b8a1b 100644
+--- a/XPerlForever_ArcaneBar/XPerlForever_ArcaneBar.toc
++++ b/XPerlForever_ArcaneBar/XPerlForever_ArcaneBar.toc
+@@ -1,4 +1,4 @@
+-## Interface: 120005, 120007, 120100, 16001, 20505, 20506, 11507, 11508
++## Interface: 120005, 120007, 120100, 120105, 16001, 20505, 20506, 11507, 11508
+ ## IconTexture: Interface\AddOns\XPerlForever\XPerlForeverIcon
+ ## Version: 1.0.2
+ ## Author: Ziliya; based on work by Resike and Halfdays
+diff --git a/XPerlForever_AuraBlacklist/XPerlForever_AuraBlacklist.toc b/XPerlForever_AuraBlacklist/XPerlForever_AuraBlacklist.toc
+index 04fbc47..b7219b0 100644
+--- a/XPerlForever_AuraBlacklist/XPerlForever_AuraBlacklist.toc
++++ b/XPerlForever_AuraBlacklist/XPerlForever_AuraBlacklist.toc
+@@ -1,4 +1,4 @@
+-## Interface: 120005, 120007, 120100, 16001, 20505, 20506, 11507, 11508
++## Interface: 120005, 120007, 120100, 120105, 16001, 20505, 20506, 11507, 11508
+ ## IconTexture: Interface\AddOns\XPerlForever\XPerlForeverIcon
+ ## Version: 1.0.2
+ ## Author: Ziliya; based on work by Resike and Halfdays
+diff --git a/XPerlForever_CustomHighlight/XPerlForever_CustomHighlight.toc b/XPerlForever_CustomHighlight/XPerlForever_CustomHighlight.toc
+index 9936f64..5ad78ae 100644
+--- a/XPerlForever_CustomHighlight/XPerlForever_CustomHighlight.toc
++++ b/XPerlForever_CustomHighlight/XPerlForever_CustomHighlight.toc
+@@ -1,4 +1,4 @@
+-## Interface: 120005, 120007, 120100, 16001, 20505, 20506, 11507, 11508
++## Interface: 120005, 120007, 120100, 120105, 16001, 20505, 20506, 11507, 11508
+ ## IconTexture: Interface\AddOns\XPerlForever\XPerlForeverIcon
+ ## Version: 1.0.2
+ ## Author: Ziliya; based on work by Resike and Halfdays
+diff --git a/XPerlForever_Options/XPerlForever_Options.toc b/XPerlForever_Options/XPerlForever_Options.toc
+index 1eeb238..c4642e2 100644
+--- a/XPerlForever_Options/XPerlForever_Options.toc
++++ b/XPerlForever_Options/XPerlForever_Options.toc
+@@ -1,4 +1,4 @@
+-## Interface: 120005, 120007, 120100, 16001, 20505, 20506, 11507, 11508
++## Interface: 120005, 120007, 120100, 120105, 16001, 20505, 20506, 11507, 11508
+ ## IconTexture: Interface\AddOns\XPerlForever\XPerlForeverIcon
+ ## Version: 1.0.2
+ ## Author: Ziliya; based on work by Resike and Halfdays
+diff --git a/XPerlForever_Party/XPerlForever_Party.toc b/XPerlForever_Party/XPerlForever_Party.toc
+index c1c297d..f3b53e7 100644
+--- a/XPerlForever_Party/XPerlForever_Party.toc
++++ b/XPerlForever_Party/XPerlForever_Party.toc
+@@ -1,4 +1,4 @@
+-## Interface: 120005, 120007, 120100, 16001, 20505, 20506, 11507, 11508
++## Interface: 120005, 120007, 120100, 120105, 16001, 20505, 20506, 11507, 11508
+ ## IconTexture: Interface\AddOns\XPerlForever\XPerlForeverIcon
+ ## Version: 1.0.2
+ ## Author: Ziliya; based on work by Resike and Halfdays
+diff --git a/XPerlForever_PartyPet/XPerlForever_PartyPet.toc b/XPerlForever_PartyPet/XPerlForever_PartyPet.toc
+index 95dc6d8..80c79b8 100644
+--- a/XPerlForever_PartyPet/XPerlForever_PartyPet.toc
++++ b/XPerlForever_PartyPet/XPerlForever_PartyPet.toc
+@@ -1,4 +1,4 @@
+-## Interface: 120005, 120007, 120100, 16001, 20505, 20506, 11507, 11508
++## Interface: 120005, 120007, 120100, 120105, 16001, 20505, 20506, 11507, 11508
+ ## IconTexture: Interface\AddOns\XPerlForever\XPerlForeverIcon
+ ## Version: 1.0.2
+ ## Author: Ziliya; based on work by Resike and Halfdays
+diff --git a/XPerlForever_Player/XPerlForever_Player.toc b/XPerlForever_Player/XPerlForever_Player.toc
+index 0ae96d1..78f5f82 100644
+--- a/XPerlForever_Player/XPerlForever_Player.toc
++++ b/XPerlForever_Player/XPerlForever_Player.toc
+@@ -1,4 +1,4 @@
+-## Interface: 120005, 120007, 120100, 16001, 20505, 20506, 11507, 11508
++## Interface: 120005, 120007, 120100, 120105, 16001, 20505, 20506, 11507, 11508
+ ## IconTexture: Interface\AddOns\XPerlForever\XPerlForeverIcon
+ ## Version: 1.0.2
+ ## Author: Ziliya; based on work by Resike and Halfdays
+diff --git a/XPerlForever_PlayerBuffs/XPerlForever_PlayerBuffs.toc b/XPerlForever_PlayerBuffs/XPerlForever_PlayerBuffs.toc
+index 682c6cd..4d516d0 100644
+--- a/XPerlForever_PlayerBuffs/XPerlForever_PlayerBuffs.toc
++++ b/XPerlForever_PlayerBuffs/XPerlForever_PlayerBuffs.toc
+@@ -1,4 +1,4 @@
+-## Interface: 120005, 120007, 120100, 16001, 20505, 20506, 11507, 11508
++## Interface: 120005, 120007, 120100, 120105, 16001, 20505, 20506, 11507, 11508
+ ## IconTexture: Interface\AddOns\XPerlForever\XPerlForeverIcon
+ ## Version: 1.0.2
+ ## Author: Ziliya; based on work by Resike and Halfdays
+diff --git a/XPerlForever_PlayerPet/XPerlForever_PlayerPet.toc b/XPerlForever_PlayerPet/XPerlForever_PlayerPet.toc
+index a06bf03..50bb333 100644
+--- a/XPerlForever_PlayerPet/XPerlForever_PlayerPet.toc
++++ b/XPerlForever_PlayerPet/XPerlForever_PlayerPet.toc
+@@ -1,4 +1,4 @@
+-## Interface: 120005, 120007, 120100, 16001, 20505, 20506, 11507, 11508
++## Interface: 120005, 120007, 120100, 120105, 16001, 20505, 20506, 11507, 11508
+ ## IconTexture: Interface\AddOns\XPerlForever\XPerlForeverIcon
+ ## Version: 1.0.2
+ ## Author: Ziliya; based on work by Resike and Halfdays
+diff --git a/XPerlForever_RaidAdmin/XPerlForever_RaidAdmin.toc b/XPerlForever_RaidAdmin/XPerlForever_RaidAdmin.toc
+index fda7b06..99f7af0 100644
+--- a/XPerlForever_RaidAdmin/XPerlForever_RaidAdmin.toc
++++ b/XPerlForever_RaidAdmin/XPerlForever_RaidAdmin.toc
+@@ -1,4 +1,4 @@
+-## Interface: 120005, 120007, 120100, 16001, 20505, 20506, 11507, 11508
++## Interface: 120005, 120007, 120100, 120105, 16001, 20505, 20506, 11507, 11508
+ ## IconTexture: Interface\AddOns\XPerlForever\XPerlForeverIcon
+ ## Version: 1.0.2
+ ## Author: Ziliya; based on work by Resike and Halfdays
+diff --git a/XPerlForever_RaidFrames/XPerlForever_RaidFrames.toc b/XPerlForever_RaidFrames/XPerlForever_RaidFrames.toc
+index 1c5554e..969c430 100644
+--- a/XPerlForever_RaidFrames/XPerlForever_RaidFrames.toc
++++ b/XPerlForever_RaidFrames/XPerlForever_RaidFrames.toc
+@@ -1,4 +1,4 @@
+-## Interface: 120005, 120007, 120100, 16001, 20505, 20506, 11507, 11508
++## Interface: 120005, 120007, 120100, 120105, 16001, 20505, 20506, 11507, 11508
+ ## IconTexture: Interface\AddOns\XPerlForever\XPerlForeverIcon
+ ## Version: 1.0.2
+ ## Author: Ziliya; based on work by Resike and Halfdays
+diff --git a/XPerlForever_RaidHelper/XPerlForever_RaidHelper.toc b/XPerlForever_RaidHelper/XPerlForever_RaidHelper.toc
+index 728e205..0a668a6 100644
+--- a/XPerlForever_RaidHelper/XPerlForever_RaidHelper.toc
++++ b/XPerlForever_RaidHelper/XPerlForever_RaidHelper.toc
+@@ -1,4 +1,4 @@
+-## Interface: 120005, 120007, 120100, 16001, 20505, 20506, 11507, 11508
++## Interface: 120005, 120007, 120100, 120105, 16001, 20505, 20506, 11507, 11508
+ ## IconTexture: Interface\AddOns\XPerlForever\XPerlForeverIcon
+ ## Version: 1.0.2
+ ## Author: Ziliya; based on work by Resike and Halfdays
+diff --git a/XPerlForever_RaidMonitor/XPerlForever_RaidMonitor.toc b/XPerlForever_RaidMonitor/XPerlForever_RaidMonitor.toc
+index cebe598..9b78ee5 100644
+--- a/XPerlForever_RaidMonitor/XPerlForever_RaidMonitor.toc
++++ b/XPerlForever_RaidMonitor/XPerlForever_RaidMonitor.toc
+@@ -1,4 +1,4 @@
+-## Interface: 120005, 120007, 120100, 16001, 20505, 20506, 11507, 11508
++## Interface: 120005, 120007, 120100, 120105, 16001, 20505, 20506, 11507, 11508
+ ## IconTexture: Interface\AddOns\XPerlForever\XPerlForeverIcon
+ ## Version: 1.0.2
+ ## Author: Ziliya; based on work by Resike and Halfdays
+diff --git a/XPerlForever_RaidPets/XPerlForever_RaidPets.toc b/XPerlForever_RaidPets/XPerlForever_RaidPets.toc
+index 88b11e9..30cdb08 100644
+--- a/XPerlForever_RaidPets/XPerlForever_RaidPets.toc
++++ b/XPerlForever_RaidPets/XPerlForever_RaidPets.toc
+@@ -1,4 +1,4 @@
+-## Interface: 120005, 120007, 120100, 16001, 20505, 20506, 11507, 11508
++## Interface: 120005, 120007, 120100, 120105, 16001, 20505, 20506, 11507, 11508
+ ## IconTexture: Interface\AddOns\XPerlForever\XPerlForeverIcon
+ ## Version: 1.0.2
+ ## Author: Ziliya; based on work by Resike and Halfdays
+diff --git a/XPerlForever_Target/XPerlForever_Target.toc b/XPerlForever_Target/XPerlForever_Target.toc
+index 376e2c7..f3d1518 100644
+--- a/XPerlForever_Target/XPerlForever_Target.toc
++++ b/XPerlForever_Target/XPerlForever_Target.toc
+@@ -1,4 +1,4 @@
+-## Interface: 120005, 120007, 120100, 16001, 20505, 20506, 11507, 11508
++## Interface: 120005, 120007, 120100, 120105, 16001, 20505, 20506, 11507, 11508
+ ## IconTexture: Interface\AddOns\XPerlForever\XPerlForeverIcon
+ ## Version: 1.0.2
+ ## Author: Ziliya; based on work by Resike and Halfdays
+diff --git a/XPerlForever_TargetTarget/XPerlForever_TargetTarget.toc b/XPerlForever_TargetTarget/XPerlForever_TargetTarget.toc
+index 31c6b86..dcb5a71 100644
+--- a/XPerlForever_TargetTarget/XPerlForever_TargetTarget.toc
++++ b/XPerlForever_TargetTarget/XPerlForever_TargetTarget.toc
+@@ -1,4 +1,4 @@
+-## Interface: 120005, 120007, 120100, 16001, 20505, 20506, 11507, 11508
++## Interface: 120005, 120007, 120100, 120105, 16001, 20505, 20506, 11507, 11508
+ ## IconTexture: Interface\AddOns\XPerlForever\XPerlForeverIcon
+ ## Version: 1.0.2
+ ## Author: Ziliya; based on work by Resike and Halfdays
+-- 
+2.48.1.windows.1
+
